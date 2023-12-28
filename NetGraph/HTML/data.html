@@ -1,0 +1,4256 @@
+﻿<!DOCTYPE html>
+
+<html langg="en" xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8" />
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #cy, #back_img_wrap {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0px;
+            left: 0px;
+        }
+
+        #back_img_wrap {
+            z-index: -2;
+        }
+
+        #node {
+            width: 100px;
+            height: 100px;
+        }
+
+        .tippy-popper {
+            transition: none !important;
+        }
+
+        .tippy-box {
+            margin-top: 0.3rem;
+        }
+
+        .tippy-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+            padding: 0.0rem 0.0rem;
+        }
+
+
+        .main_container {
+            position: relative;
+            display: block;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #img_wrap, #cy, #img_canvas, #sel_node_wrap {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #sel_node_wrap {
+        }
+
+        .img_back_item {
+            position: absolute;
+            display: block;
+        }
+
+        .sel_item, .sel_node_item {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border: solid 1px black;
+            z-index: 1;
+        }
+
+        .sel_item_0 {
+            cursor: se-resize;
+        }
+
+        .sel_item_1 {
+            cursor: s-resize;
+        }
+
+        .sel_item_2 {
+            cursor: sw-resize;
+        }
+
+        .sel_item_3 {
+            cursor: e-resize;
+        }
+
+        .sel_item_4 {
+            cursor: e-resize;
+        }
+
+        .sel_item_5 {
+            cursor: sw-resize;
+        }
+
+        .sel_item_6 {
+            cursor: s-resize;
+        }
+
+        .sel_item_7 {
+            cursor: se-resize;
+        }
+    </style>
+    <script>
+        var default_relationship_strength_width = 1;
+        var default_relationship_strength_color = "rgb(0,0,0)";
+        var tippy_flag = true;
+        function update_edge_data(width, color) {
+            default_relationship_strength_width = width;
+            default_relationship_strength_color = color;
+        }
+    </script>
+    <script src="netg://js/jquery.js"></script>
+    <script src="netg://js/lodash.js"></script>
+
+    <script src="netg://js/cytoscape.min.js"></script>
+    <script src="netg://js/popper.min.js"></script>
+    <script src="netg://js/cytoscape-popper.js"></script>
+    <script src="netg://js/tippy-bundle.umd.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.7.4/dist/dagre.js"></script>
+    <script src="netg://js/cytoscape-dagre.js"></script>
+    <script src="netg://js/cytoscape-all-paths.js"></script>
+    <script src="netg://js/cola.min.js"></script>
+    <script src="netg://js/cytoscape-cola.js"></script>
+    <script src="netg://js/elk.bundled.js"></script>
+    <script src="netg://js/cytoscape-elk.js"></script>
+    <script src="https://unpkg.com/layout-base@1.0.2/layout-base.js"></script>
+    <script src="netg://js/avsdf-base.js"></script>
+    <script src="netg://js/cytoscape-avsdf.js"></script>
+    <script src="netg://js/cose-base.js"></script>
+    <script src="netg://js/cytoscape-cise.js"></script>
+    <script src="netg://js/cytoscape-cose-bilkent.js"></script>
+    <script src="netg://js/cytoscape-undo-redo.js"></script>
+    <script src="netg://js/copyImageClipboard.js"></script>
+    <script src="netg://js/cytoscape-grid-guide.js"></script>
+    <script src="netg://js/cytoscape-drag-and-drop.js"></script>
+    <script src="netg://js/cytoscape-edgehandles.js"></script>
+    <script src="netg://js/cytoscape-node-editing.js"></script>
+    <script src="netg://js/cytoscape-node-html-label.js"></script>
+    <script src="netg://js/cytoscape.layers.js"></script>
+    <script src="netg://js/cytoscape.euler.js"></script>
+    <script src="netg://js/cytoscape.bubbleset.js"></script>
+    <script src="netg://js/heatmap.js"></script>
+    <script src="netg://js/backgroundImage.js"></script>
+    <link rel="stylesheet" href="netg://css/backdrop.css" />
+    <link rel="stylesheet" href="netg://css/light.css" />
+
+</head>
+
+<body>
+
+    <script>
+        (async function () {
+            await CefSharp.BindObjectAsync("bound");
+        })();
+    </script>
+    <div class="main_container">
+        <div id="img_wrap"></div>
+        <div id="sel_node_wrap"></div>
+        <div id="cy"></div>
+        <canvas id="merge_canvas" style="border: solid 1px red; width: 0; z-index:0; position: absolute; left: 0; top: 0"></canvas>
+    </div>
+    <img src="javascript:;" style="display: none;" id="svg_img" />
+    <script>
+        var g_title_type = "true";
+        var debugMode = false;
+        var lastNodeColor;
+        var lastNodeSize;
+        var lastNodeShape;
+        var lastNode;
+        var numberOfSelectedNodes = 0;
+        var numberOfSelectedEdges = 0;
+        //Manual targeting
+        var manualTargetingSourceID = null;
+        var isManualTargeting = false;
+        //Style targeting
+        var styleCopySourceID = null;
+        var isStyleCopyTargeting = false;
+        var doubleClickInterval = 500;
+        //Just placeholder. We set this values from main code
+        var useLastNodeColorAsDefault = false;
+        var useLastNodeShapeAsDefault = false;
+        var useLastNodeSizeAsDefault = false;
+        //var manualTargetingMode = 'one';
+        var allowSelfConnectedNodes = false;
+        var showNodeSelectionCues = true;
+        var alwaysSelectLastNode = false;
+        var colorizeNodes = false;
+        var colorForGroupNodes;
+        var shapeForGroupNodes;
+        var shapeForAssetNodes;
+        var shapeForObjectiveNodes;
+        var colorForAssetNodes;
+        var colorForObjectiveNodes;
+        var colorForAttackNodes;
+        var colorForvulnerabilityNodes;
+        var nodeSizeIsedgeStrengthValue;
+        var textWrapWidth = 50;
+        var wrapLongText = true;
+        var reverseManualTargeting = false;
+        var truncateNodeText = false;
+        var truncateTextLength = 100;
+        //Color settings
+        var vc1 = {};
+        var vc2 = {};
+        var vc3 = {};
+        var vc4 = {};
+        var selectedNodes = {};
+        var selectedEdges = {};
+        //Set of data label
+        var labels = {};
+        var edge_labels = {};
+        var descriptionTips = {};
+        //Add style for tips
+        var tippyStyle = document.createElement('style')
+        tippyStyle.innerHTML = ".dummyClassForTipData { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 12px; padding: 0.0rem 0.0rem;}";
+        document.body.appendChild(tippyStyle);
+        var edge_style = "";
+        var edge_width = 1.0;
+        var last_edge_added;
+        var default_edge_relationships = [];
+
+        var heatmap = null;
+        var heatmap_flag = "false";
+        var heatmap_type = "risk";
+        var heat_data = [];
+        var zoom_flag = false;
+        var zoom_delay = 100;
+        var zoom_value = 1;
+        var now_date = 0;
+
+        var highlight_flag = "false";
+        var highlight_canvas = "";
+        var highlight_context = "";
+        var highlight_json = [];
+
+        var cdnd;//
+        var removeEmptyParents = false;
+        var g_node_visible_flag = {
+            "control": true,
+            "attack": true,
+            "actor": true,
+            "asset": true,
+            "vulnerability": true,
+            "group": true,
+            "objective": true,
+            "evidence": true,
+            "edge": true
+        }
+
+        var draw_image_count;
+        var origin_zoom = 1;
+        var getCapturedImage = function () {
+            draw_image_count = 0;
+            var merge_canvas = document.getElementById("merge_canvas");
+            var merge_contxt = merge_canvas.getContext("2d");
+
+            merge_contxt.scale(1 / origin_zoom, 1 / origin_zoom);
+            origin_zoom = cy.zoom();
+            merge_contxt.scale(origin_zoom, origin_zoom);
+
+            var heatmap_canvas = document.getElementById("heatmap-canvas");
+            var heatmap_context = heatmap_canvas.getContext("2d");
+
+            var graph_img_str = cy.jpg();
+            var heatmap_img_str = heatmap_canvas.toDataURL();
+
+            merge_contxt.clearRect(0, 0, 2000, 2000);
+            var graph_img = new Image();
+            graph_img.src = graph_img_str;
+            graph_img.onload = function () {
+                draw_image_count++;
+                merge_contxt.drawImage(graph_img, 0, 0);
+                completedDrawed();
+            };
+
+            var heatmap_img = new Image();
+            heatmap_img.src = heatmap_img_str;
+            heatmap_img.onload = function () {
+                draw_image_count++;
+                completedDrawed();
+            };
+
+        }
+
+        var completedDrawed = function () {
+            var merge_canvas = document.getElementById("merge_canvas");
+            var merge_contxt = merge_canvas.getContext("2d");
+            var heatmap_canvas = document.getElementById("heatmap-canvas");
+            var heatmap_context = heatmap_canvas.getContext("2d");
+
+            if (draw_image_count == 2) {
+                const imageData = heatmap_context.getImageData(0, 0, heatmap_canvas.width, heatmap_canvas.height);
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    const r = imageData.data[i];
+                    const g = imageData.data[i + 1];
+                    const b = imageData.data[i + 2];
+                    const a = imageData.data[i + 3];
+                    if (r === 255 && g === 255 && b === 255) {
+                        imageData.data[i + 3] = 0; // Set alpha to 0 for white pixels
+                    }
+                }
+                heatmap_context.putImageData(imageData, 0, 0);
+                merge_contxt.drawImage(heatmap_canvas, 0, 0);
+            }
+        };
+
+        var isParentOfOneChild = function (node) {
+            return node.isParent() && node.children().length === 1;
+        };
+
+        var removeParent = function (parent) {
+            parent.children().move({ parent: null });
+            parent.remove();
+        };
+
+        var removeParentsOfOneChild = function () {
+            cy.nodes().filter(isParentOfOneChild).forEach(removeParent);
+        };
+
+        var getSelectedNodeType = function () {
+            var keys = Object.keys(selectedNodes);
+            if (keys.length < 0) return "";
+            var type = GetNodeType(keys[0]);
+            return type;
+
+        }
+
+        var cy;
+        var bubbleSet;
+
+        var options = {
+            isDebug: false, // Debug mode for console messages
+            actions: {},// actions to be added
+            undoableDrag: true, // Whether dragging nodes are undoable can be a function as well
+            stackSizeLimit: undefined, // Size limit of undo stack, note that the size of redo stack cannot exceed size of undo stack
+            ready: function () { // callback when undo-redo is ready
+            },
+
+        }
+
+        var updateValues = function () {
+            const zoom = cy.zoom();
+            bound.eventHandler('main', 'zoom', zoom);
+            tippyStyle.innerHTML = `.dummyClassForTipData { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: ${12 * zoom}px; padding: 0.0rem 0.0rem; }`;
+        }
+        var dragStartNodeID = "";
+        var ur;
+        var cyHTMLLabel;
+        function init() {
+
+            /*$(window).on("keyup", function (e) {
+                e.preventDefault();
+                var selected_node = cy.$(':selected').first();
+
+                if (selected_node == null || selected_node == undefined || selected_node.length == 0) return;
+
+                if (e.keyCode != 8 && e.keyCode != 32  && e.key.length > 1) return;
+
+                var title = selected_node.data("title");
+                switch (e.keyCode) {
+                    case 13: // Enter
+                        break;
+                    case 32: // space
+                        break;
+                    case 8:  // Backspace
+                        title = title.length == 0 ? "" : title.substr(0, title.length - 1);
+                        break;
+                    default:
+                        title = title + e.key;// String.fromCharCode(e.keyCode);
+                        break;
+                }
+                selected_node.data("title", title);
+            });*/
+
+            cy = cytoscape({
+                container: document.getElementById('cy'), // container to render in
+                multiClickDebounceTime: 250,
+                wheelSensitivity: 0.5,
+                motionBlur: false,
+                motionBlurOpacity: 1.0,
+                //The stylesheet for the graph
+                style: [
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': function (ele) { return getEdgeWidth(ele) },
+                            'line-color': 'data(color)',
+                            'color': function (ele) { return getEdgeColor(ele) },
+                            'weight': function (ele) { return getEdgeWeight(ele) },
+                            'target-arrow-color': 'data(color)',
+                            'target-arrow-shape': 'triangle',
+                            'opacity': function (ele) { return getEdgeOpacity(ele) },
+                            'curve-style': 'bezier',
+                            'control-point-step-size': 50,
+                            'label': function (ele) { return getShowingEdgeLabel(ele) },//'data(relationship)',
+                            'font-size': 'data(labelSize)',
+                            'text-background-color': 'white',
+                            'text-background-opacity': 1,
+                            'text-background-padding': '5px',
+                            'text-wrap': 'wrap',
+                            'text-valign': 'top',
+                            'text-max-width': "50"
+                        }
+                    },
+                    {
+                        selector: 'asset-group',
+                        style: {
+                            "shape": "triangle"
+                        }
+                    },
+                    {
+                        selector: 'node-group',
+                        style: {
+                            "shape": "triangle"
+                        }
+                    },
+                    {
+                        selector: 'group',
+                        style: {
+                            "shape": "triangle"
+                        }
+                    },
+                    {
+                        selector: 'node',
+                        style: {
+                            "background-image": function (ele) { return setNodeImage(ele) },
+                            "background-width": "100%",
+                            "background-height": "100%",
+                            //"background-width": function (ele) { return setNodeBackgroundWidth(ele) },
+                            //"background-height": function (ele) { return setNodeBackgroundHeight(ele) },
+                            'width': 'data(width)', //'width': function (ele) { return getNodeSize(ele) },
+                            'height': 'data(height)',
+                            //'height': function (ele) { return getNodeSize(ele) },
+                            'shape': 'data(shape)',
+                            'background-color': function (ele) {
+                                return getColorForNode(ele);
+                            },
+                            "background-opacity": function (ele) {
+                                return getNodeFillOpacity(ele);
+                            },
+                            'border-width': function (ele) {
+                                return getBorderWidthForNode(ele);
+                            },
+                            'border-opacity': function (ele) {
+                                return getNodeBorderOpacity(ele);
+                            },
+                            'border-style': 'solid',
+                            'border-color': function (ele) {
+                                return getBorderColorForNode(ele);
+                            },
+                            //'title': function (ele) { return getShowingTitle(ele) },
+                            //'title': data.title,
+                            'color': 'data(titleTextColor)',
+                            'font-family': "data(fontFamily)",
+                            'font-size': 'data(titleSize)',
+                            'font-style': 'data(fontStyle)',
+                            'font-weight': 'data(fontWeight)',
+                            'text-background-color': 'white',
+                            'text-background-opacity': 1,
+                            'min-zoomed-font-size': 10,
+                            'text-halign': function (ele) { return getTitlePosition('h', ele) },
+                            'text-valign': function (ele) { return getTitlePosition('v', ele) },
+                            'text-wrap': 'wrap',
+                            'opacity': 'data(opacity)',
+                            'text-max-width': "50"
+                        }
+                    },
+                    {
+                        selector: 'node:selected',
+                        style: {
+                            'border-color': "blue",
+                            'border-opacity': "1.0",
+                            'border-width': "5px",
+                            'border-style': "double",
+                        }
+                    },
+
+                    {
+                        selector: 'edge:selected',
+                        style: {
+                            'line-color': "blue",
+                            'target-arrow-color': "blue",
+                            'source-arrow-color': "blue",
+                        }
+                    },
+                    {
+                        selector: 'node[label]',
+                        style: {
+                            'color': "blue",
+                            'font-family': "Segoe UI",
+                            'font-size': "150",
+                            'min-zoomed-font-size': "5px"
+                        }
+                    },
+                    {
+                        selector: ':parent',
+                        style: {
+                            'text-valign': 'bottom',
+                            'text-halign': 'center',
+                            'border-color': "blue",
+                            'background-color': 'white',
+                            'border-width': 1,
+                            'font-family': "Segoe UI",
+                            'min-zoomed-font-size': 10,
+                            'text-wrap': 'wrap'
+                        }
+                    },
+                    {
+                        selector: '.cdnd-grabbed-node',
+                        style: {
+                            'background-color': 'silver'
+                        }
+                    },
+
+                    {
+                        selector: '.cdnd-drop-sibling',
+                        style: {
+                            'background-color': 'whitesmoke'
+                        }
+                    },
+
+                    {
+                        selector: '.cdnd-drop-target',
+                        style: {
+                            'border-color': 'red',
+                            'border-style': 'dashed'
+                        }
+                    }
+                ],
+
+                layout: {
+                    name: 'grid',
+                    rows: 1
+                },
+
+                data: {
+                    'fontFamily': 'Segoe UI',
+                    'fontStyle': 'normal',
+                    'textDecoration': 'solid',
+                    'fontWeight': '100',
+                    'position': 'Center',
+                    'imagePath': '',
+                    'image': '',
+                    'name': '',
+                    'created': new Date().toISOString(),
+                    'updated': null,
+                    'description': '',
+                    'notes': '',
+                    'layout': 'freeform',
+                    'overlapAlgo': 'none',
+                    'showLabels': true,
+                    'showCompoundAssetEdges': false,
+                    'majorVersion': 0,
+                    'minorVersion': 0,
+                    'revision': 0,
+                    'maxScore': 0,
+                    'assessedScore': 0,
+                    'impactedScore': 0,
+                    'nodeSizeIsedgeStrengthValue': false,
+                    'masterID': '',
+                    'relationshipStrength': edge_style,
+                    'edgeColor': 'rgb(0,0,0)',
+                    'edgeWeight': '1'
+                }
+            });
+
+            bubbleSet = cy.bubbleSets();
+
+            cyHTMLLabel = cy.nodeHtmlLabel([{
+                query: "node",
+                valign: "center",
+                halign: "center",
+                tpl: function (data) {
+                    if (data.nodeType == undefined) return;
+                    var type = data.nodeType.toLowerCase();
+                    if (g_node_visible_flag[type]) {
+                        return "<div class='node-" + type + "'>" + abbrTitle(data) + "</div>";
+                    } else {
+                        return "<div class='node-" + type + "'></div>";
+                    }
+                }
+            }]);
+
+            ur = cy.undoRedo(options);
+            cdnd = cy.compoundDragAndDrop();
+
+            var tmp_shape_flag = false;
+            cy.on("mousedown", function () {
+                tmp_shape_flag = true;
+            });
+
+            cy.on("mousemove", function () {
+                if (tmp_shape_flag == false) return;
+                update_shape_position_for_node();
+            });
+
+            cy.on('mouseup', function (event) {
+                tmp_shape_flag = false;
+                generate_heatmap(heatmap_flag, heatmap_type);
+                drawHighlight(highlight_flag, highlight_json);
+            });
+
+            cy.on("drag", function () {
+                update_shape_position_for_node();
+            });
+
+            cy.on("drop", function () {
+                update_shape_position_for_node();
+            });
+
+            cy.on('cdnddrop', function (event, dropTarget, dropSibling) {
+                var type = GetNodeType(dragStartNodeID);
+                if (dropTarget.data("id") != null && type != "") {// && (dropSibling.data("id") != null || type == "control" || type == "asset")) {
+                    //alert("New Parent Node : " + dropTarget.data("id"));
+                    //alert("Drop on : " + dropSibling.data("id"));
+                    //var type = GetNodeType(dragStartNodeID);// getSelectedNodeType();
+                    dropSiblingId = dropSibling.data("id");
+                    dropTargetId = dropTarget.data("id")
+
+                    if (dropSiblingId == undefined || dropTargetId == undefined)
+                        return;
+
+                    sdropSibling = GetNodeType(dropSiblingId);
+                    sdropTarget = GetNodeType(dropTargetId);
+
+                    if (type == "control" && (sdropSibling == "control" || sdropTarget == "control")) {
+                        CreateDropControlGroup(dropTarget.data("id"));
+                    }
+                    else
+                        if (type == "asset" && (sdropSibling == "asset" || sdropTarget == "asset" || sdropTarget == "asset-group")) {
+                            CreateDropAssetGroup(dropTarget.data("id"));
+                        }
+                        else {
+                            removeParent(dropTarget);
+                        }
+                };
+            });
+
+            cy.on("zoom", function (event) {
+                update_shape_position_for_node()
+                    ;
+            });
+
+            cy.on('cdndover ', function (event, dropTarget, dropSibling) {
+
+            });
+
+            cy.on('cdndout', function (event, dropTarget) {
+                if (removeEmptyParents && isParentOfOneChild(dropTarget)) {
+                    removeParent(dropTarget);
+                }
+            });
+
+            cy.on("tapstop", function (event) {
+                console.log("tap start");
+            });
+
+            cy.on("tapstart", function (event) {
+                console.log("tapstart");
+            });
+
+            cy.on("tap", function (event) {
+                console.log("tap");
+            })
+
+            cy.on('remove', function (event) {
+                if (removeEmptyParents) {
+                    removeParentsOfOneChild();
+                }
+            });
+
+            cy.on('ready', function (event) {
+                bound.eventHandler('main', 'ready', JSON.stringify(cy.data()));
+            });
+
+            cy.on('layoutstop', function (event) {
+                bound.eventHandler('main', 'layoutstop', JSON.stringify(cy.data()));
+            });
+
+            cy.on('layoutready', function (event) {
+                bound.eventHandler('main', 'layoutready', JSON.stringify(cy.data()));
+            });
+
+            setInterval(function () {
+                if (zoom_flag == true && heatmap_flag == "true") {
+                    if ((Date.now() - now_date) > zoom_delay) {
+                        generate_heatmap(heatmap_flag, heatmap_type);
+                        zoom_flag = false;
+                    }
+                }
+
+                if (zoom_flag == true) {
+                    if ((Date.now() - now_date) > zoom_delay) {
+                        drawHighlight(highlight_flag, highlight_json);
+                        zoom_flag = false;
+                    }
+                }
+            }, zoom_delay / 10);
+
+            //On zoom try to play with font size of values
+            cy.on('zoom', function (event) {
+                zoom_flag = true;
+                now_date = Date.now();
+                updateValues();
+            });
+
+            //Right click on graph
+            cy.on('cxttap', function (event) {
+                if (event.target == cy) {
+                    //Right click on background
+                    bound.eventHandler('main', 'rightClick', eventToJson('', '', event.position, event.renderedPosition));
+                }
+            });
+
+            //tap start on graph
+            cy.on('tapstart', function (event) {
+                if (event.target == cy) {
+                    bound.eventHandler('main', 'tapstart', eventToJson('', '', event.position, event.renderedPosition));
+                }
+            });
+
+            cy.on('tap', function (event) {
+                if (event.target == cy) {
+                    //Right click on background
+                    if (isManualTargeting) {
+                        removeManualTargetingMode();
+                    }
+                    if (isStyleCopyTargeting) {
+                        removeStyleCopyMode();
+                    }
+                    bound.eventHandler('main', 'click', eventToJson('', '', event.position, event.renderedPosition));
+                }
+            });
+
+            cy.on('data', cy_data);
+            //Box selection finished
+
+
+            cy.on('boxstart', function () {
+                
+                    bound.eventHandler('main', 'boxstart', "");
+
+            });
+
+            cy.on('boxend', function () {
+                setTimeout(function () {
+                    let selectedNodes = cy.nodes(':selected');
+                    let count = selectedNodes.length;
+                    bound.eventHandler('main', 'boxend', count);
+                }, 0);
+            });
+
+            cy.on('dblclick', function (event) {
+                if (event.target.id == undefined) {
+                    bound.eventHandler('main', 'doubleClick', JSON.stringify(cy.data()));
+                }
+            });
+
+            //Edge selected
+            cy.addListener('select', 'edge', edgeSelected);
+
+            cy.on('newedge', function (event) {
+                bound.eventHandler('edge', 'newedge');
+            });
+
+            //Edge unselected
+            cy.addListener('unselect', 'edge', edgeUnselected);
+
+            //Right click on edge
+            cy.on('cxttap', 'edge', function (event) {
+                //Do not pass event to graph
+                bound.eventHandler('edge', 'rightClick', eventToJson(event.target.id(), '', event.position, event.renderedPosition));
+            });
+
+            //Double click on edge
+            cy.on('dblclick', 'edge', function (event) {
+                bound.eventHandler('edge', 'doubleClick', eventToJson(event.target.id()));
+            });
+
+            //On edge added
+            cy.on('add', 'edge', function (event) {
+                bound.eventHandler('edge', 'add', eventToJson(event.target.id()));
+
+                var data = event.target.data();
+                //Set scaled font size
+                var fontSize = 12 * cy.zoom();
+                //Create tip
+                var tippy = makeEdgeTippy(event.target, event.target.id(), fontSize);
+                //TODO: Set font size for tippy according to zoom
+                //Set data content initially
+                getHTMLForEdgeLabel(event.target.id());
+            });
+
+            //On edge locked
+            cy.on('lock', 'edge', function (event) {
+                bound.eventHandler('edge', 'lock', eventToJson(event.target.id()));
+            });
+
+            //On edge unlocked
+            cy.on('unlock', 'edge', function (event) {
+                bound.eventHandler('edge', 'unlock', eventToJson(event.target.id()));
+            });
+
+            //Data changed event
+            cy.on('data', 'edge', function (event) {
+                bound.eventHandler('edge', 'data', eventToJson(event.target.id()));
+            });
+
+            //Node selected
+            cy.addListener('select', 'node', nodeSelected);
+
+            //Node unselected
+            cy.addListener('unselect', 'node', nodeUnselected);
+
+            //Start click on node
+            cy.on('tapstart', 'node', function (event) {
+                targetID = event.target.id();
+                dragStartNodeID = targetID;
+                bound.eventHandler('node', 'tapstart', eventToJson(event.target.id(), event.target.data('title')));
+                if (event.target.isNode()) {
+                    if (isManualTargeting) {
+                        if (targetID == manualTargetingSourceID) {
+                            if (allowSelfConnectedNodes == false) {
+                                return;
+                            }
+                        }
+
+                        addEdge(manualTargetingSourceID, event.target.id());
+                        switch (manualTargetingMode) {
+                            case 'one':
+                                //Set one target and exit from manual mode
+                                removeManualTargetingMode();
+                                break;
+                            default:
+                            case 'continued':
+                                //Do nothing. This is by default
+                                break;
+                            case 'path':
+                                //Set last selected node as source for new target
+                                manualTargetingSourceID = event.target.id();
+                                break;
+                        }
+                    }
+                    if (isStyleCopyTargeting) {
+                        if (targetID == styleCopySourceID) {
+                            //Do not copy style from itself
+                            return;
+                        }
+                        var target = event.target.id();
+                        var sourceNode = cy.getElementById(styleCopySourceID);
+                        var targetNode = cy.getElementById(target);
+                        targetNode.data('color', sourceNode.data('color'));
+                        targetNode.data('width', sourceNode.data('width'));
+                        targetNode.data('height', sourceNode.data('height'));
+                        targetNode.data('shape', sourceNode.data('shape'));
+                        targetNode.data('titleSize', sourceNode.data('titleSize'));
+                        targetNode.data('titleTextColor', sourceNode.data('titleTextColor'));
+                        removeStyleCopyMode();
+                    }
+                }
+            });
+
+            //Right click on node
+            cy.on('cxttap', 'node', function (event) {
+                bound.eventHandler('node', 'rightClick', eventToJson(event.target.id(), event.target.data('title'), event.position, event.renderedPosition));
+            });
+
+            //Double click on node
+            cy.on('dblclick', 'node', function (event) {
+                bound.eventHandler('node', 'doubleClick', eventToJson(event.target.id(), event.target.data('title'), event.position, event.renderedPosition));
+            });
+
+            //On node added
+            cy.on('add', 'node', function (event) {
+                bound.eventHandler('node', 'add', eventToJson(event.target.id(), event.target.data('title')));
+                var data = event.target.data();
+                var nodeType = data.nodeType;
+                //Set scaled font size
+                var fontSize = 12 * cy.zoom();
+                //Create tip
+                var tippy = makeTippy(event.target, event.target.id(), fontSize);
+                //TODO: Set font size for tippy according to zoom
+                //Set data content initially
+                getHTMLForTippy(event.target.id());
+                if (nodeType != null) {
+                    if (cy.data('showLabels') && nodeType.toLowerCase() != "infobox") {
+                        //tippy.show();
+                    }
+                }
+            });
+
+            //On node removed
+            cy.on('remove', 'node', function (event) {
+                var id = event.target.id();
+                if (labels[id] == undefined) return;
+                //remove label from graph
+                labels[id].destroy();
+                //remove label from dictionary
+                delete labels[id];
+                bound.eventHandler('node', 'remove', eventToJson(event.target.id(), event.target.data('title')));
+                draw_selection_shapes_for_node(0, 0, 0, 0, false);
+
+            });
+
+            //On edge removed
+            cy.on('remove', 'edge', function (event) {
+                var id = event.target.id();
+                if (edge_labels[id] == undefined) return;
+
+                edge_labels[id].destroy();
+                delete edge_labels[id];
+                bound.eventHandler('edge', 'remove', eventToJson(event.target.id()));
+            });
+
+            //On node locked
+            cy.on('lock', 'node', function (event) {
+                bound.eventHandler('node', 'lock', eventToJson(event.target.id(), event.target.data('title')));
+            });
+
+            //On node unlocked
+            cy.on('unlock', 'node', function (event) {
+                bound.eventHandler('node', 'unlock', eventToJson(event.target.id(), event.target.data('title')));
+            });
+
+            //On node position changed
+            cy.on('position', 'node', function (event) {
+                event.position = event.target.position();
+                event.renderedPosition = event.target.renderedPosition();
+                //bound.eventHandler('node', 'position', eventToJson(event.target.id(), event.target.data('title'), event.position, event.renderedPosition));
+
+                // selected node
+                var selected_node = cy.$(':selected');
+                if (selected_node == null || selected_node == undefined || selected_node.length == 0) return;
+                var node_data = selected_node.data();
+                if (node_data.createFlag == 1) {
+                    selected_node.data("createFlag", 2);
+                    update_shape_position_for_node();
+                } else {
+                    if (selected_shape_editable_index == null) {
+                        update_shape_position_for_node();
+                    }
+                    return;
+                }
+            });
+
+            ////Node drag
+            //cy.on('drag', 'node', function (event) {
+            //    bound.eventHandler('node', 'drag', eventToJson(event.target.id()));
+
+            //    // selected node
+            //    update_shape_position_for_node();
+            //    //select_node_event(cy.getElementById(event.target.id()));
+            //});
+
+            //Node drag free
+            //cy.on('dragfree', 'node', function (event) {
+            //    bound.eventHandler('node', 'dragfree', eventToJson(event.target.id()));
+            //    update_shape_position_for_node();
+
+            //});
+
+            //Data changed event
+            cy.addListener('data', 'node', nodeDataChanged);
+
+            cy.on("mousemove", "node", function (event) {
+                if (cy.data("showLabels") && labels[event.target.id()] != undefined)
+                    labels[event.target.id()].show();
+            });
+
+            cy.on("mouseout", "node", function (event) {
+                if (labels[event.target.id()] != undefined)
+                    labels[event.target.id()].hide();
+            });
+
+            cy.on("mousemove", "edge", function (event) {
+                if (cy.data("showLabels") && edge_labels[event.target.id()] != undefined)
+                    edge_labels[event.target.id()].show();
+            });
+
+            cy.on("mouseout", "edge", function (event) {
+                if (edge_labels[event.target.id()] != undefined)
+                    edge_labels[event.target.id()].hide();
+            });
+        }
+
+        init();
+
+        function getCountOfSelectedNodes() {
+            return cy.$(':selected').length;
+        }
+
+        function getSelectedNodesAsJSON() {
+            const nodeArray = [];
+            cy.$(':selected').forEach(ele => {
+                if (ele.isNode()) {
+                    nodeArray.push(ele.data());
+                }
+            });
+            return JSON.stringify(nodeArray);
+        }
+
+        function getFirstSelectedNodeAsJSON(cy) {
+            let nodeData = null;
+
+            cy.$(':selected').some(ele => {
+                if (ele.isNode()) {
+                    nodeData = ele.data();
+                    return true;  
+                }
+                return false; 
+            });
+
+            return JSON.stringify(nodeData);
+        }
+
+        function getSelectedEdgesAsJSON() {
+            const edgeArray = [];
+            cy.$(':selected').forEach(ele => {
+                if (ele.isEdge()) {
+                    edgeArray.push(ele.data());
+                }
+            });
+            return JSON.stringify(edgeArray);
+        }
+
+        function ShowBubbleSet(node_ids = [], edge_ids = [], color = "green") {
+            ClearBubbleSet(); 
+            const edges = cy.edges().slice(0, 4);
+            const nodes = edges.connectedNodes();
+            bubbleSet.addPath(nodes, edges, cy.nodes().diff(nodes).left, {
+                drawPotentialArea: true
+            });
+
+            /*var nodes = GetNodeListFromIds(node_ids);
+            var edges = GetEdgeListFromIds(edge_ids);
+            bubbleSet.addPath(nodes, edges, cy.nodes().diff(nodes).left, { style: { stroke: color, fill: color, opacity: 0.5 } });*/
+        }
+
+        function GetNodeListFromIds(node_ids) {
+            var cy_nodes = cy.nodes();
+            let nodes = cy.nodes().slice(0, 0);
+            for (var i = 0; i < cy_nodes.length; i++) {
+                if (node_ids.indexOf(cy_nodes[i].data()["id"]) > -1) {
+                    nodes.push(cy_nodes[i]);
+                }
+            }
+            return cy.nodes();
+        }
+
+        function GetEdgeListFromIds(edge_ids) {
+            var cy_edges = cy.edges();
+            let edges = cy.edges().slice(0, 0);
+            for (var i = 0; i < /*cy_edges.length*/10; i++) {
+                if (edge_ids.indexOf(cy_edges[i].data()["id"]) > -1) {
+                    edges.push(cy_edges[i]);
+                }
+            }
+            return cy.edges();
+        }
+
+        function ClearBubbleSet() {
+            var paths = bubbleSet.getPaths();
+            for (var i = 0; i < paths.length; i++) {
+                bubbleSet.removePath(paths[i]);
+            }
+        }
+
+        function drawHighlight(flag = "false", highlight_data = [], color = "db0000") {
+            highlight_json = highlight_data;
+            highlight_flag = flag;
+            var json = cy.json();
+            var pan = json.pan;
+            var offset_x = pan.x;
+            var offset_y = pan.y;
+            var json_data = json.elements;
+            var nodes = json_data.nodes;
+            var zoom = json.zoom;
+
+            if (highlight_canvas == "") {
+                highlight_canvas = document.createElement("canvas");
+                document.getElementById("cy").appendChild(highlight_canvas);
+                highlight_context = highlight_canvas.getContext('2d');
+                highlight_canvas.style.position = "absolute";
+                highlight_canvas.style.left = 0;
+                highlight_canvas.style.top = 0;
+                highlight_canvas.width = document.getElementById("cy").offsetWidth;
+                highlight_canvas.height = document.getElementById("cy").offsetHeight;
+            }
+
+            highlight_context.clearRect(0, 0, highlight_canvas.width, highlight_canvas.height);
+            if (flag == "false") {
+                return;
+            }
+            for (var i = 0; i < nodes.length; i++) {
+                var item = nodes[i];
+                var pos_x = item.position.x;
+                var pos_y = item.position.y;
+                var data_x = offset_x + pos_x * zoom;
+                var data_y = offset_y + pos_y * zoom;
+                var cur_x = parseInt(data_x);
+                var cur_y = parseInt(data_y);
+
+                var node_id = item.data.id;
+                if (highlight_json.indexOf(node_id) > -1) {
+                    var highlight_height = (parseInt(item.data.height) + 3) * zoom;
+
+                    highlight_context.beginPath();
+                    highlight_context.arc(cur_x, cur_y, highlight_height, 0, Math.PI * 2, true);
+                    highlight_context.strokeStyle = color;
+                    highlight_context.fillStyle = '#ffc3c3';
+                    highlight_context.lineWidth = 5;
+                    highlight_context.stroke();
+                }
+            }
+        }
+
+        function edge_position(nodes, edge) {
+            var source_id = edge.data.source;
+            var target_id = edge.data.target;
+            var source_pos = "";
+            var target_pos = "";
+            var flag = 0;
+            for (var i = 0; i < nodes.length; i++) {
+                var item = nodes[i];
+                if (item.data.id == source_id) {
+                    source_pos = item.position;
+                    flag++;
+                }
+                if (item.data.id == target_id) {
+                    target_pos = item.position;
+                    flag++;
+                }
+                if (flag == 2) break;
+            }
+            return { source_pos: source_pos, target_pos: target_pos };
+        }
+
+        function get_center_pos(source_pos, target_pos) {
+            return {
+                x: (source_pos.x + target_pos.x) / 2,
+                y: (source_pos.y + target_pos.y) / 2
+            };
+        }
+
+        function generate_heatmap(flag = "false", mode = "risk", selected_nodes = null, selected_edges = null) {
+            heatmap_flag = flag;
+            heatmap_type = mode;
+            heat_data = [];
+            if (heatmap_flag == "false") {
+                if (heatmap != null) {
+                    heatmap.setData({
+                        min: 0,
+                        max: 100,
+                        data: heat_data
+                    });
+                }
+                return;
+            }
+            var json = cy.json();
+            var pan = json.pan;
+            var offset_x = pan.x;
+            var offset_y = pan.y;
+            var json_data = json.elements;
+            var nodes = json_data.nodes;
+            var edges = json_data.edges;
+            var zoom = json.zoom;
+
+            for (var i = 0; i < nodes.length; i++) {
+                var item = nodes[i];
+                var node_guid = item.data.id;
+                if (selected_nodes != null && selected_nodes.indexOf(node_guid) < 0) continue;
+                var pos_x = item.position.x;
+                var pos_y = item.position.y;
+                var data_x = offset_x + pos_x * zoom;
+                var data_y = offset_y + pos_y * zoom;
+                var cur_x = parseInt(data_x);
+                var cur_y = parseInt(data_y);
+                var heat_map_value = -1;
+
+                if (mode == "risk") {
+
+                    switch (item.data.nodeType.toLowerCase()) {
+                        case "control":
+                            heat_map_value = 100 - parseInt(item.data.calculatedValue);
+                            break;
+                        case "attack":
+                            heat_map_value = item.data.attackMitigatedScore;
+                            break;
+                        case "actor":
+                            heat_map_value = item.data.actorMitigatedScore;
+                            break;
+                        case "vulnerability":
+                            heat_map_value = item.data.vulnerabilityMitigatedScore;
+                            break;
+                        case "asset":
+                            heat_map_value = item.data.assetMitigatedScore;
+                            break;
+                        case "groups":
+                            heat_map_value = 100 - parseInt(item.data.edgeStrengthValue);
+                            break;
+                    }
+                }
+                else if (mode = "compliance") {
+                    switch (item.data.nodeType.toLowerCase()) {
+                        case "control":
+                            heat_map_value = 100 - parseInt(item.data.calculatedValue);
+                            break;
+                        case "asset":
+                            heat_map_value = 100 - ((parseInt(item.data.objectiveAcheivedValue) / parseInt(item.data.objectiveTargetValue)) * 100);
+                            break;
+                        case "asset-group":
+                            heat_map_value = 100 - ((parseInt(item.data.objectiveAcheivedValue) / parseInt(item.data.objectiveTargetValue)) * 100);
+                            break;
+                        case "objective":                             
+                            heat_map_value = 100 - ((parseInt(item.data.objectiveAcheivedValue) / parseInt(item.data.objectiveTargetValue)) * 100);
+                            break;
+                    }
+                }
+
+                if (heat_map_value != -1) {
+                    heat_data.push({ x: cur_x, y: cur_y, value: heat_map_value });
+                }
+            }
+
+            if (heatmap == null) {
+                heatmap = h337.create({
+                    container: document.getElementById("cy"),
+                    maxOpacity: 0.7,
+                    radus: 50,
+                    blur: 0.75
+                });
+            }
+
+            heatmap.setData({
+                min: 0,
+                max: 100,
+                data: heat_data
+            });
+        }
+
+        function showEdge(flag) {
+            var edges = cy.edges();
+
+            for (var i = 0; i < edges.length; i++) {
+                var item = edges[i];
+                if (flag.toLowerCase() == "true") {
+                    item.style("display", "element");
+                } else {
+                    item.style("display", "none");
+                }
+            }
+        }
+
+        function showNodes(node_data) {
+            node_data = JSON.parse(node_data);
+            var control_flag = node_data.control;
+            var attack_flag = node_data.attack;
+            var actor_flag = node_data.actor;
+            var asset_flag = node_data.asset;
+            var vulnerability_flag = node_data.vulnerability;
+            var group_flag = node_data.group;
+            var objective_flag = node_data.objective;
+            var evidence_flag = node_data.evidence;
+
+            g_node_visible_flag["control"] = control_flag;
+            g_node_visible_flag["attack"] = attack_flag;
+            g_node_visible_flag["actor"] = actor_flag;
+            g_node_visible_flag["asset"] = asset_flag;
+            g_node_visible_flag["vulnerability"] = vulnerability_flag;
+            g_node_visible_flag["group"] = group_flag;
+            g_node_visible_flag["objective"] = objective_flag;
+            g_node_visible_flag["evidence"] = evidence_flag;
+
+            var all_flag = ((!control_flag && !attack_flag && !actor_flag && !asset_flag && !vulnerability_flag) ||
+                (control_flag && attack_flag && actor_flag && asset_flag && vulnerability_flag && group_flag && objective_flag && evidence_flag)) ? true : false;
+
+            var nodes = cy.nodes();
+            for (var i = 0; i < nodes.length; i++) {
+                var item = nodes[i];
+                var type = item.data().nodeType;
+                var flag = all_flag;
+                switch (type.toLowerCase()) {
+                    case "control":
+                        if (control_flag) {
+                            flag = true;
+                        }
+                        break;
+                    case "actor":
+                        if (actor_flag) { flag = true }
+                        break;
+                    case "asset":
+                        if (asset_flag) { flag = true }
+                        break;
+                    case "attack":
+                        if (attack_flag) { flag = true }
+                        break;
+                    case "vulnerability":
+                        if (vulnerability_flag) { flag = true }
+                        break;
+                    case "group":
+                        if (group_flag) { flag = true }
+                        break;
+                    case "objective":
+                        if (objective_flag) { flag = true }
+                        break;
+                    case "evidence":
+                        if (evidence_flag) { flag = true }
+                        break;
+                }
+                if (flag == true) {
+                    item.show();
+                } else {
+                    item.hide();
+                }
+            }
+
+            setTimeout(function () {
+                var nodes = cy.nodes();
+                for (var i = 0; i < nodes.length; i++) {
+                    nodes[i].deselect(); nodes[i].select(); nodes[i].deselect();
+                }
+            }, 100);
+
+
+            $(".node-control").addClass("test").css("display", control_flag ? "block" : "none");
+            $(".node-attack").css("display", attack_flag ? "block" : "none");
+            $(".node-actor").css("display", actor_flag ? "block" : "none");
+            $(".node-asset").css("display", asset_flag ? "block" : "none");
+            $(".node-vulnerability").css("display", vulnerability_flag ? "block" : "none");
+            $(".node-group").css("display", group_flag ? "block" : "none");
+            $(".node-objective").css("display", objective_flag ? "block" : "none");
+            $(".node-evidence").css("display", evidence_flag ? "block" : "none");
+        }
+
+        function setDefaultEdgeRelationship(data) {
+            default_edge_relationships = data;
+        }
+
+        function get_default_edge_relationships(source, target) {
+            source = source.toLowerCase();
+            target = target.toLowerCase();
+            for (var i = 0; i < default_edge_relationships.length; i++) {
+                var item = default_edge_relationships[i];
+                if (item["source"].toLowerCase() == source && item["target"].toLowerCase() == target) {
+                    return item["relation"];
+                }
+            }
+            return "Belongs To";
+        }
+
+        function setTitleType(type) {
+            g_title_type = type;
+            cy.data("title_type", g_title_type);
+        }
+
+        function getCyFullData() {
+            var tmp_img_data = [];
+            if (img_data && img_data != "" && img_data != null) {
+                for (var i = 0; i < img_data.length; i++) {
+                    item = { ...img_data[i] };
+                    item["img_obj"] = "";
+                    tmp_img_data.push(item);
+                }
+            }
+
+            return {
+                "data1": cy.data(),
+                "data2": cy.elements().jsons(),
+                "data3": JSON.stringify(img_data),//"",//tmp_img_data,//
+                "data4": sel_background_color
+            };
+        }
+
+        function CreateDropAssetGroup(NodeID) {
+            var groupNode = cy.getElementById(NodeID);
+            groupNode.data('title', "Asset Group");
+            groupNode.data('titleSize', "10");
+            groupNode.data('titleTextColor', "#fff");
+            groupNode.data('controlBaseScore', 0);
+            groupNode.data('calculatedValue', 0);
+            groupNode.data('calculatedMinValue', 0);
+            groupNode.data('note', "");
+            groupNode.data('nodeType', "asset-group");
+            groupNode.data('enabled', true);
+        }
+
+        function CreateDropControlGroup(NodeID) {
+            var groupNode = cy.getElementById(NodeID);
+            groupNode.data('title', "Control Group");
+            groupNode.data('titleSize', "10");
+            groupNode.data('titleTextColor', "#fff");
+            groupNode.data('controlBaseScore', 0);
+            groupNode.data('calculatedValue', 0);
+            groupNode.data('calculatedMinValue', 0);
+            groupNode.data('note', "");
+            groupNode.data('nodeType', "control");
+            groupNode.data('enabled', true);
+        }
+
+        function setNodeBackgroundWidth(ele) {
+            return [ele.data("size"), ele.data("size"), ele.data("size")];
+        }
+
+        function setNodeBackgroundHeight(ele) {
+            return [ele.data("size"), ele.data("size"), ele.data("size")];
+        }
+
+        function getTitlePosition(type, ele) {
+            var pos = ele.data("position") ? ele.data("position") : "center";
+            var ret_val = "center";
+            switch (pos) {
+                case "Top":
+                    ret_val = type == "v" ? "top" : "center";
+                    break;
+                case "Bottom":
+                    ret_val = type == "v" ? "bottom" : "center";
+                    break;
+                case "Left":
+                    ret_val = type == "v" ? "center" : "left";
+                    break;
+                case "Right":
+                    ret_val = type == "v" ? "center" : "right";
+                    break;
+                case "Above":
+                    ret_val = type == "v" ? "center" : "center";
+                    break;
+                case "Above2":
+                    ret_val = type == "v" ? "center2" : "center2";
+                    break;
+                default:
+                    ret_val = type == "v" ? "center" : "center";
+                    break;
+            }
+            return ret_val;
+        }
+
+        function selectNodeAnimation(id) {
+            var cy_width = cy.width();
+            var cy_height = cy.height();
+            var node = cy.getElementById(id);
+            var node_pos = node.position();
+            var node_x = node_pos.x;
+            var node_y = node_pos.y;
+            var node_width = node.width();
+            var node_height = node.height();
+            var zoom = 1.5;
+            var ani_time = 500;
+            var zoom_node_width = 50;
+            cy.nodes().unselect();
+            node.select();
+            cy.animate({ fit: { eles: node, padding: (cy.height() - zoom_node_width) / 2 }, zoom: zoom }, { duration: ani_time });
+        }
+
+        function showHideTippy(flag = true) {
+            cy.data("showLabels", flag);
+        }
+
+        function showHideGrid(flag = "true") {
+            cy.gridGuide({ drawGrid: flag.toLowerCase() == "true" });
+        }
+
+        function undoCy() {
+            ur.undo();
+        }
+
+        function redoCy() {
+            ur.redo();
+        }
+
+        function isUndoable() {
+            return !ur.isUndoStackEmpty();
+        }
+
+        function isRedoable() {
+            return !ur.isRedoStackEmpty();
+        }
+
+        function getR(value) {
+
+        }
+
+        function getG(value) {
+
+        }
+
+        function getB(value) {
+
+        }
+
+        function setNodeImage(ele) {
+            if (ele.data("image") == null || ele.data("image") == "") {
+                return false;
+            } else {
+                if (ele.data("image").substr(0, 10) == "data:image") {
+                    return ele.data("image");
+                } else {
+                    return "data:image/png;base64," + ele.data("image");
+                }
+            }
+        }
+
+        function svg2img(xml) {
+            var svg64 = btoa(xml);
+            var b64start = 'data:image/svg+xml;base64,';
+            var image64 = b64start + svg64;
+            return image64;
+        };
+
+        function getEdgeOpacity(node) {
+            var opacity = node.data('opacity');
+            if (node.data('type') == "Asset") {
+                if (cy.data('showCompoundAssetEdges') == true)
+                    return 1
+                else
+                    return 0
+            }
+            else
+                return opacity;
+        }
+
+        function getColorForNode(node) {
+            var color = node.data('color');
+
+            return color;
+        }
+
+        function getBorderColorForNode(node) {
+            var color = node.data('border_color');
+            return color;
+        }
+
+        function getBorderWidthForNode(node) {
+            var width = node.data('borderWidth');
+            width = width == undefined ? "1" : width;
+            return width + "px";
+        }
+
+        //Set colors and values for nodes
+        function setColorsVC1(v, c) {
+            vc1 = { v, c };
+        }
+
+        function setColorsVC2(v, c) {
+            vc2 = { v, c };
+        }
+
+        function setColorsVC3(v, c) {
+            vc3 = { v, c };
+        }
+
+        function setColorsVC4(v, c) {
+            vc4 = { v, c };
+        }
+
+        function setTruncateTextLength(length) {
+            truncateTextLength = length;
+        }
+
+        // Select Truncated long text node
+        function getShowingTitle(ele) {
+            var title = ele.data('title');
+            var control_ref = ele.data('frameworkReference');
+            var title_type = g_title_type;//ele.data('title_type');
+            title = title_type == "none" ? "" : (title_type == "true" ? title : control_ref);
+            if (title == null)
+                title = "";
+            if (title.length > truncateTextLength) {
+                return title.substr(0, truncateTextLength) + "...";
+            }
+            return title;
+        }
+
+        function abbrTitle(data) {
+            var title_type = g_title_type;//ele.data('title_type');
+            var title = data.title;
+            var control_ref = data.frameworkReference;
+            title = title_type == "none" ? "" : (title_type == "true" ? title : control_ref);
+
+            if (title == null) {
+                title = "";
+            } else if (title.length > truncateTextLength) {
+                return title.substr(0, truncateTextLength) + "...";
+            }
+            return title;
+        }
+
+        // Select Truncated long text node
+        function getShowingEdgeLabel(ele) {
+            var title = ele.data('relationship');
+            var label_type = g_title_type;//ele.data('label_type');
+            title = label_type == "none" ? "" : title;
+            if (title == null)
+                title = "";
+            return title;
+        }
+
+        function getEdgeWidth(ele) {
+            var edgeWidth = ele.data('weight');
+            edgeWidth = edgeWidth == undefined ? edge_width : edgeWidth;
+            if (edgeWidth < 0.1) return 0.1
+            else
+                return edgeWidth;
+        }
+
+        function getEdgeWeight(ele) {
+            var edgeWidth = ele.data('weight');
+            edgeWidth = edgeWidth == undefined ? edge_width : edgeWidth;
+            if (edgeWidth < 0.1) return 0.1
+            else
+                return edgeWidth;
+        }
+
+        function getEdgeColor(ele) {
+            var edgeColor = ele.data('color');
+            edgeColor = edgeColor == undefined ? "rgb(0,0,0)" : edgeColor;
+            return edgeColor;
+        }
+
+        function getNodeFillOpacity(ele) {
+            var nodeOpacity = ele.data('background_opacity');
+            if (nodeOpacity == null || nodeOpacity === undefined) {
+                var imagePath = ele.data('imagepath')
+                if (imagePath == "" || imagePath == null)
+                    return 1
+                else
+                    return 0
+            }
+            else
+                return ele.data('background_opacity');
+        }
+
+        function getNodeBorderOpacity(ele) {
+            var nodeOpacity = ele.data('border_opacity');
+            if (nodeOpacity == null || nodeOpacity === undefined) {
+                var imagePath = ele.data('imagepath')
+                if (imagePath == "" || imagePath == null)
+                    return 1
+                else
+                    return 0
+            }
+            else
+                return ele.data('border_opacity');
+        }
+
+        function getNodeSize(ele) {
+            return ele.data('size');
+        }
+
+        function getNodeSizebyNodeID(NodeID) {
+            var node = cy.getElementById(NodeID);
+            return node.data('size');
+
+        }
+
+        function getNodeOldSize(NodeID) {
+            var node = cy.getElementById(NodeID);
+            return node.data('_size');
+        }
+
+        function getHigestedgeStrengthValue() {
+            var highestValue = 0;
+            cy.nodes().forEach(ele => {
+                if (ele.data('edgeStrengthValue') > highestValue) {
+                    highestValue = ele.data('edgeStrengthValue');
+                }
+            });
+            return highestValue;
+        }
+
+        function getLowestedgeStrengthValue() {
+            var lowestValue = 99999999;
+            cy.nodes().forEach(ele => {
+                if (ele.data('edgeStrengthValue') < lowestValue) {
+                    lowestValue = ele.data('edgeStrengthValue');
+                }
+            });
+            return lowestValue;
+        }
+
+        function setFontSizeForEachTippy(size) {
+            //Just note: document.getElementsByClassName('tippy-content')[0].style.setProperty('font-size', '8px');
+            var elements = document.getElementsByClassName('tippy-content');
+            [].forEach.call(elements, function (element) {
+                element.style.setProperty('font-size', `${size}px`);
+            });
+            //Reposition all
+            for (const [key, value] of Object.entries(labels)) {
+                //Turn off animation for zoom
+                //Without this trick labels display not in place
+                value.props.duration = [0, 0];
+                value.hide();
+                if (cy.data('showLabels')) {
+                    value.show();
+                }
+                //And turn on animation after zoom
+                value.props.duration = [250, 250];
+            }
+        }
+
+        function getHTMLForTippy(id) {
+            var node = cy.getElementById(id);
+            var node_data = node.data();
+            if (node_data == undefined || node_data == null || node_data.nodeType == undefined || node_data.nodeType == null) return;
+            var node_type = node_data.nodeType.toLowerCase();
+            var label1 = "";
+            var label2 = "";
+            var label3 = "";
+            var value1 = "";
+            var value2 = "";
+            var value3 = "";
+            switch (node_type) {
+                case "actor":
+                    label1 = "Actor Value";
+                    label2 = "Actor Mitigated Value";
+
+                    value1 = node_data.calculatedValue;
+                    value2 = node_data.actorMotivationValue;
+                    break;
+                case "attack":
+                    label1 = "Attack Value";
+                    label2 = "Attack Mitigated Value";
+                    label3 = "Threat Score";
+
+                    value1 = node_data.calculatedValue;
+                    value2 = node_data.attackMitigatedScore;
+                    value3 = node_data.threatScore;
+                    break;
+                case "vulnerability":
+                    label1 = "Vulnerability Value";
+                    label2 = "Vulnerability Mitigated Value";
+                    label3 = "Likelihood Score";
+
+                    value1 = node_data.calculatedValue;
+                    value2 = 0;
+                    value3 = 0;
+                    break;
+                case "asset":
+                    label1 = "Asset Value";
+                    label2 = "Asset Mitigated Value";
+                    label3 = "Asset Score";
+
+                    value1 = node_data.calculatedValue;
+                    value2 = "0";
+                    value3 = "0";
+                    break;
+                case "control":
+                    label1 = "Control Strength";
+                    label2 = "Control Implementation";
+                    label3 = "Control Value";
+
+                    value1 = node_data.implementedStrength;
+                    value2 = node_data.implementedStrength;
+                    value3 = node_data.calculatedValue;
+                    break;
+                case "objective":
+                    label1 = "Objective Target";
+                    label2 = "Objective Achieved";
+
+                    value1 = node_data.objectiveTargetValue;
+                    value2 = node_data.objectiveAcheivedValue;
+                    break;
+            }
+
+            var html = '<table class="dummyClassForTipData" style="border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0"><tbody>';
+            if (label1 != "") {
+                html += "<tr>";
+                html += "<td nowrap>" + label1 + "</td>";
+                html += "<td nowrap style='text-align: right; padding-left: 10px;'>" + value1 + "</td>";
+                html += "</tr>";
+            }
+
+            if (label2 != "") {
+                html += "<tr>";
+                html += "<td nowrap>" + label2 + "</td>";
+                html += "<td nowrap style='text-align: right; padding-left: 10px;'>" + value2 + "</td>";
+                html += "</tr>";
+            }
+
+            if (label3 != "") {
+                html += "<tr>";
+                html += "<td nowrap>" + label3 + "</td>";
+                html += "<td nowrap style='text-align: right; padding-left: 10px;'>" + value3 + "</td>";
+                html += "</tr>";
+            }
+            html += "</tbody><table>";
+            return html;
+        }
+
+        //Used for made standard tippy label in normal (not debug) mode
+        function getHTMLForLabel(controlBaseScore, calculatedValue, edgeStrengthValue) {
+            var controlBaseScoreFormatted = new Intl.NumberFormat('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(controlBaseScore);
+            var calculatedValueFormatted = new Intl.NumberFormat('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(calculatedValue);
+            var edgeStrengthValueFormatted = new Intl.NumberFormat('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(edgeStrengthValue);
+
+            //<tr>
+            //    <td nowrap>Max Value</td>
+            //    <td nowrap style="text-align: right; padding-left: 10px;">${controlBaseScoreFormatted}</td>
+            //</tr>
+
+            var html =
+                `<table class="dummyClassForTipData" style="border-collapse: collapse;margin-top: 1rem" border="0" cellspacing="0" cellpadding="0">
+                        <tbody>
+                            <tr>
+                                <td nowrap>Assessed value</td>
+                                <td nowrap style="text-align: right; padding-left: 10px;">${edgeStrengthValueFormatted}</td>
+                            </tr>
+                            <tr>
+                                <td nowrap>Calculated value</td>
+                                <td nowrap style="text-align: right; padding-left: 10px;">${calculatedValueFormatted}</td>
+                            </tr>
+                        </tbody>
+                    </table>`;
+            return html;
+        }
+
+        //Used for testing only, for show nodes ID's. In production use getHTMLForLabel
+        function getHTMLForLabel_debug(id, controlBaseScore, calculatedValue, edgeStrengthValue) {
+            /*if (!debugMode) {
+                return getHTMLForLabel(controlBaseScore, calculatedValue, edgeStrengthValue);
+            }*/
+
+            var node = cy.getElementById(id);
+            var node_data = node.data();
+            if (node_data == undefined || node_data == null || node_data.nodeType == undefined || node_data.nodeType == null) return;
+            var node_type = node_data.nodeType.toLowerCase();
+            var label1 = "";
+            var label2 = "";
+            var label3 = "";
+            var value1 = "";
+            var value2 = "";
+            var value3 = "";
+            switch (node_type) {
+                case "actor":
+                    label1 = "Actor Value";
+                    label2 = "Actor Mitigated Value";
+
+                    value1 = node_data.calculatedValue;
+                    value2 = node_data.actorMotivationValue;
+                    break;
+                case "attack":
+                    label1 = "Attack Value";
+                    label2 = "Attack Mitigated Value";
+                    label3 = "Threat Score";
+
+                    value1 = node_data.calculatedValue;
+                    value2 = node_data.attackMitigatedScore;
+                    value3 = node_data.threatScore;
+                    break;
+                case "vulnerability":
+                    label1 = "Vulnerability Value";
+                    label2 = "Vulnerability Mitigated Value";
+                    label3 = "Likelihood Score";
+
+                    value1 = node_data.calculatedValue;
+                    value2 = 0;
+                    value3 = 0;
+                    break;
+                case "asset":
+                    label1 = "Asset Value";
+                    label2 = "Asset Mitigated Value";
+                    label3 = "Asset Score";
+
+                    value1 = node_data.calculatedValue;
+                    value2 = "0";
+                    value3 = "0";
+                    break;
+                case "control":
+                    label1 = "Control Strength";
+                    label2 = "Control Implementation";
+                    label3 = "Control Value";
+
+                    value1 = node_data.implementedStrength;
+                    value2 = node_data.implementedStrength;
+                    value3 = node_data.calculatedValue;
+                    break;
+                case "objective":
+                    label1 = "Objective Target";
+                    label2 = "Objective Achieved";
+
+                    value1 = node_data.objectiveTargetValue;
+                    value2 = node_data.objectiveAcheivedValue;
+                    break;
+            }
+
+            var html = '<table class="dummyClassForTipData" style="border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0"><tbody>';
+            if (label1 != "") {
+                html += "<tr>";
+                html += "<td nowrap>" + label1 + "</td>";
+                html += "<td nowrap style='text-align: right; padding-left: 10px;'>" + value1 + "</td>";
+                html += "</tr>";
+            }
+
+            if (label2 != "") {
+                html += "<tr>";
+                html += "<td nowrap>" + label2 + "</td>";
+                html += "<td nowrap style='text-align: right; padding-left: 10px;'>" + value2 + "</td>";
+                html += "</tr>";
+            }
+
+            if (label3 != "") {
+                html += "<tr>";
+                html += "<td nowrap>" + label3 + "</td>";
+                html += "<td nowrap style='text-align: right; padding-left: 10px;'>" + value3 + "</td>";
+                html += "</tr>";
+            }
+            html += "</tbody><table>";
+            return html;
+        }
+
+        var makeTippy = function (node, id, textSize) {
+            if (node.data().nodeType == null) return null;
+            if (node.data().nodeType.toLowerCase() == "infobox") return null;
+            var node = node.popperRef();
+            // Since tippy constructor requires DOM element/elements, create a placeholder
+            var dummyDomEle = document.createElement('div');
+            var tip = tippy(dummyDomEle, {
+                getReferenceClientRect: node.getBoundingClientRect,
+                trigger: 'mouseenter', // mandatory
+                // dom element inside the tippy:
+                content: function () { // function can be better for performance
+                    var div = document.createElement('div');
+                    div.innerHTML = getHTMLForTippy(id);
+                    return div;
+                },
+                // your own preferences:
+                arrow: false,
+                theme: 'light',
+                placement: 'bottom',
+                hideOnClick: false,
+                sticky: "reference",
+                zIndex: 1,
+                animateFill: false,
+                // if interactive:
+                interactive: false,
+                duration: [250, 250],
+                maxWidth: 'none',
+                appendTo: document.body // or append dummyDomEle to document.body
+            });
+            labels[id] = tip;
+            return tip;
+        };
+
+        var makeEdgeTippy = function (edge, id, textSize) {
+            var edge = edge.popperRef();
+            // Since tippy constructor requires DOM element/elements, create a placeholder
+            var dummyDomEle = document.createElement('div');
+            var tip = tippy(dummyDomEle, {
+                getReferenceClientRect: edge.getBoundingClientRect,
+                trigger: 'mouseenter', // mandatory
+                // dom element inside the tippy:
+                content: function () { // function can be better for performance
+                    var div = document.createElement('div');
+                    div.innerHTML = getHTMLForEdgeLabel(id);
+                    return div;
+                },
+                // your own preferences:
+                arrow: false,
+                theme: 'light',
+                placement: 'bottom',
+                hideOnClick: false,
+                sticky: "reference",
+                zIndex: 1,
+                animateFill: false,
+                // if interactive:
+                interactive: false,
+                duration: [250, 250],
+                maxWidth: 'none',
+                appendTo: document.body // or append dummyDomEle to document.body
+            });
+            edge_labels[id] = tip;
+            return tip;
+        };
+
+        //Get ShortestPath - Returns an Array of Node and Edge IDs
+        function GetShortestPath(sourceID, destinationID) {
+            const IDArray = [];
+            var SourceNode = cy.getElementById(sourceID);
+            var DestinationNode = cy.getElementById(destinationID);
+            var results = cy.elements().aStar({ root: SourceNode, goal: DestinationNode, directed: true });
+            if (results.found == true) {
+                results.path.forEach(path => {
+                    IDArray.push(path.id());
+                });
+            };
+            return JSON.stringify(IDArray);
+        }
+
+        //Get All Paths - Returns an Array of Node and Edge IDs
+        function GetAllPaths(sourceID, destinationID) {
+            const IDArray = [];
+            var SourceNode = cy.getElementById(sourceID);
+            var DestinationNode = cy.getElementById(destinationID);
+            results = cy.elements().cytoscapeAllPaths({ rootIds: SourceNode, target: DestinationNode, directed: true });
+
+            for (let i = 0; i < results.length; i++) {
+                results[i].forEach(ele => {
+                    IDArray.push(ele.id());
+                });
+            }
+            return JSON.stringify(IDArray);
+        }
+
+        //Return the type of Node
+        function GetNodeType(NodeID) {
+            if (NodeID == null || NodeID == "") return "";
+            var node = cy.getElementById(NodeID);
+            controlType = node.data('nodeType');
+            return controlType;
+        }
+
+        //Return if the Node is Enabled or Disabled
+        function IsNodeEnabled(NodeID) {
+            var Enabled = "false";
+            var node = cy.getElementById(NodeID);
+            if (node.data('enabled') != null) {
+                Enabled = node.data('enabled');
+            }
+            return Enabled;
+        }
+
+        //Return if the Edge is Enabled or Disabled
+        function IsEdgeEnabled(NodeID) {
+            var Enabled = "false";
+            var node = cy.getElementById(NodeID);
+            Enabled = node.data('enabled');
+            return Enabled;
+        }
+
+        //Return if a root node or not
+        function IsRootNode(NodeID) {
+            var IsRoot = "false";
+            nodes = cy.getElementById(NodeID);
+            roots = cy.nodes().roots(nodes);
+            if (roots.length == 1) {
+                IsRoot = "true";
+            }
+            return IsRoot;
+        }
+
+        //Return if a Edge or not
+        function IsEdge(NodeID) {
+            var IsEdge = "false";
+            var node = cy.getElementById(NodeID);
+            if (node.source != null || node.target != null) {
+                IsEdge = "true";
+            }
+            return IsEdge;
+        }
+
+        //Return Edge Source
+        function GetNodeObjectiveTarget(SourceID) {
+            var ObjectiveTarget = "Manually set";
+            var node = cy.getElementById(SourceID);
+            if (node.source != null) {
+                ObjectiveTarget = node.data("objectiveTargetType");
+            }
+            return ObjectiveTarget;
+        }
+
+        function GetEdgeSource(EdgeID) {
+            var EdgeSource = "";
+            var node = cy.getElementById(EdgeID);
+            if (node.source != null) {
+                EdgeSource = node.data("source");
+            }
+            return EdgeSource;
+        }
+
+        //Return if Target
+        function GetEdgeTarget(EdgeID) {
+            var EdgeTarget = "";
+            var node = cy.getElementById(EdgeID);
+            if (node.target != null) {
+                EdgeTarget = node.data("target");
+            }
+            return EdgeTarget;
+        }
+
+        //Get Node Inboude Edges
+        function GetNodeSources(EdgeID) {
+            const IDArray = [];
+            var SourceNode = cy.getElementById(EdgeID);
+            var IncommersArray = SourceNode.incomers();
+            for (let i = 0; i < IncommersArray.length; i++) {
+                IncommersArray[i].forEach(ele => {
+                    if (ele.isEdge()) {
+                        IDArray.push(ele.id());
+                    }
+                });
+            }
+            return JSON.stringify(IDArray);
+        }
+
+        //Get All Asset Nodes
+        function GetAssetNodes() {
+            const IDArray = [];
+            AssetArray = cy.nodes().filter('[nodeType = "asset"]');
+            for (let i = 0; i < AssetArray.length; i++) {
+                AssetArray[i].forEach(ele => {
+                    IDArray.push(ele.id());
+                });
+            }
+            return JSON.stringify(IDArray);
+        }
+
+        //Get All Asset Nodes
+        function GetLeafAssetNodes() {
+            const IDArray = [];
+            AssetArray = cy.nodes().leaves().filter('[nodeType = "asset"]');
+            for (let i = 0; i < AssetArray.length; i++) {
+                AssetArray[i].forEach(ele => {
+                    IDArray.push(ele.id());
+                });
+            }
+            return JSON.stringify(IDArray);
+        }
+
+        function GetNodeOutgoers(NodeID) {
+            const IDArray = [];
+            nodeJson = cy.getElementById(NodeID).outgoers();
+            for (let i = 0; i < nodeJson.length; i++) {
+                nodeJson[i].forEach(ele => {
+                    IDArray.push(ele.id());
+                });
+            }
+            return JSON.stringify(IDArray);
+        }
+
+        function GetNodeOutgoerNodes(NodeID) {
+            const IDArray = [];
+            var nodeJson = cy.getElementById(NodeID).outgoers();
+            for (let i = 0; i < nodeJson.length; i++) {
+                nodeJson[i].forEach(ele => {
+                    if (ele.isNode()) {
+                        IDArray.push(ele.id());
+                    }
+                });
+            }
+            return JSON.stringify(IDArray);
+        }
+
+        //Remove all elements and reset graph properties
+        function resetGraph() {
+            selectedNodes = {};
+            selectedEdges = {};
+            cy.elements().remove();
+            resetGraphProperties();
+            cy.reset();
+        }
+
+        function removeSelectedElements() {
+            cy.$(':selected').remove();
+            return true;
+        }
+
+        function resetGraphProperties() {
+            //Remove listener for prevent multiple calls
+            cy.removeListener('data');
+            cy.data('name', '');
+            cy.data('created', new Date().toISOString());
+            cy.data('updated', null);
+            cy.data('description', '');
+            cy.data('notes', '');
+            cy.data('layout', 'Freeform');
+            cy.data('overlap', 'None');
+            cy.data('showLabels', true);
+            cy.data('showCompoundAssetEdges', false);
+            cy.data('major', 0);
+            cy.data('minor', 0);
+            cy.data('revision', 0);
+            cy.data('maxScore', 0);
+            cy.data('assessedScore', 0);
+            cy.data('impactedScore', 0);
+            //Set listener and inform about update
+            cy.on('data', cy_data);
+            cy_data();
+
+            //cy.gridGuide({ drawGrid: true, gridColor: "#000", panGrid: true, snap: true, size: 20 });
+        }
+
+        //Update graph properties
+        function updateGraphProperties(name, created, updated, description, notes, layout, overlap, showLabels, major, minor, revision, maxScore, assessedScore, impactedScore, showCompoundAssetEdges) {
+            //Remove listener for prevent multiple calls
+            cy.removeListener('data');
+            cy.data('name', name);
+            cy.data('created', created);
+            cy.data('updated', updated);
+            cy.data('description', description);
+            cy.data('notes', notes);
+            cy.data('layout', layout);
+            cy.data('overlap', overlap);
+            cy.data('showLabels', showLabels);
+            cy.data('showCompoundAssetEdges', showCompoundAssetEdges);
+            cy.data('major', major);
+            cy.data('minor', minor);
+            cy.data('revision', revision);
+            cy.data('maxScore', maxScore);
+            cy.data('assessedScore', assessedScore);
+            cy.data('impactedScore', impactedScore);
+            cy.data('showCompoundAssetEdges', showCompoundAssetEdges);
+
+            //Set listener back
+            cy.on('data', cy_data);
+            cy_data();
+        }
+
+        //Increase revision and set update time
+        function increaseRevision() {
+            cy.data('revision', cy.data('revision') + 1);
+            cy.data('updated', new Date().toISOString());
+        }
+
+        //This is converter to C# NewtonJson
+        function eventToJson(id, title = '', graphLocation, screenLocation) {
+            //This data passed to host
+            if (graphLocation === undefined) {
+                graphLocation = { x: 0, y: 0 }
+            }
+            if (screenLocation === undefined) {
+                screenLocation = { x: 0, y: 0 }
+            }
+            //Math.round in this case it is trying do it like "pixel perfect"
+            serializedData = `{"ID":"${id}","Title":${(title != null ? JSON.stringify(title) : '""')},"GraphLocation":{"X":${graphLocation?.x},"Y":${graphLocation?.y}},"ScreenLocation":"${Math.round(screenLocation?.x)},${Math.round(screenLocation?.y)}"}`;
+            return serializedData;
+        }
+
+        function drawGraph(data) {
+            cy.add(data);
+        }
+
+        //Debug message
+        function debug(message) {
+            bound.eventHandler('debug', 'debug', message);
+        }
+
+        function cy_data(event) {
+            bound.eventHandler('main', 'data', JSON.stringify(cy.data()));
+        }
+
+
+        //Make as separate function
+        function edgeSelected(event) {
+            var targetID = event.target.id();
+            var edgeJson = JSON.stringify(cy.getElementById(targetID).json());
+            bound.eventHandler('edge', 'select', edgeJson);
+            numberOfSelectedEdges = cy.edges(':selected').length;
+            //Move selected to dictionary
+            selectedEdges[targetID] = edgeJson;
+        }
+
+        //Make as separate function
+        function edgeUnselected(event) {
+            var targetID = event.target.id();
+            bound.eventHandler('edge', 'unselect', eventToJson(targetID, event.target.data('title')));
+            numberOfSelectedEdges = cy.nodes(':selected').length;
+            //Remove selected from dictionary
+            delete selectedEdges[targetID];
+        }
+
+        //Update data for node
+        function setElementData(id, data, value) {
+            var node = cy.getElementById(id);
+            if (data == "title" || data == "titleLength") {
+                if (node.data('title').length > node.data('titleLength')) {
+                    var titler = node.data('title').slice(0, node.data('titleLength')) + "...";
+                    node.data('title', titler);
+                    return;
+                }
+            } else if (data == "shape") {
+                if (node.data("image") == '' || node.data("image_path") == '') {
+                    if (node.data("color") == "#fff" || node.data("color") == "rgb(255,255,255)") {
+                        node.data("color", "#00f");
+                        return;
+                    }
+                }
+            } else if (data == "weight") {
+                console.log(data, value);
+                node.data("weight", value);
+                return;
+            } else if (data == "color") {
+                console.log(data, value);
+                node.data("color", value);
+                return;
+            }
+
+            node.data(data, value);
+            //ur.do("restore", node);
+        }
+
+        function setElementSize(id, height, width) {
+            var node = cy.getElementById(id);
+            node.data("height", height);
+            node.data("width", width);
+        }
+
+        function setElementSvgData(id, value) {
+            const img = new Image();
+            img.src = value;
+            img.onload = function () {
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+
+                const pngDataURI = canvas.toDataURL("image/png");
+
+                setElementData(id, "image", pngDataURI);
+            }
+        }
+
+        function getElementData(id, data) {
+            var node = cy.getElementById(id);
+            return node.data(data);
+        }
+
+        //Update data for edge
+        /*function setElementData(id, data, value) {
+            var Element = cy.getElementById(id);
+            Element.data(data, value);
+            //ur.do("restore", Element);
+        }*/
+
+        //Update data for Graph
+        function setGraphData(data, value) {
+            cy.data(data, value);
+        }
+
+        //Make as separate function
+        function nodeSelected(event) {
+            var targetID = event.target.id();
+            var nodeJson = cy.getElementById(targetID).json();
+            if (nodeJson.data.nodeType.indexOf("group") >= 1) {
+                draw_selection_shapes_for_node(0, 0, 0, 0);
+                bound.eventHandler('node', 'select', JSON.stringify(nodeJson));
+            } else {
+                bound.eventHandler('node', 'select', JSON.stringify(nodeJson));
+                numberOfSelectedNodes = cy.nodes(':selected').length;
+                //Move selected to dictionary
+                selectedNodes[targetID] = JSON.stringify(nodeJson);
+
+                // selected node
+                //sel_node_flag = true;
+                select_node_event(cy.getElementById(event.target.id()));
+            }
+        }
+
+        function getSelectedNode() {
+            var sel_nodes = cy.elements('node:selected');
+            return sel_nodes.json();
+        }
+
+        //Make as separate function
+        function nodeUnselected(event) {
+            var targetID = event.target.id();
+            bound.eventHandler('node', 'unselect', eventToJson(targetID, event.target.data('title')));
+            numberOfSelectedNodes = cy.nodes(':selected').length;
+            //Remove selected from dictionary
+            delete selectedNodes[targetID];
+
+            sel_node_flag = false;
+            $(".sel_node_item").css("display", "none");
+        }
+
+        function resetNodeSizes(sizeAsAssessed) {
+            cy.data('nodeSizeIsedgeStrengthValue', sizeAsAssessed);
+        }
+
+        function nodeDataChanged(event) {
+            getHTMLForTippy(event.target.id());
+            bound.eventHandler('node', 'data', eventToJson(event.target.id()));
+        }
+
+        function deselectAll() {
+            cy.nodes().deselect();
+            cy.edges().deselect();
+        }
+
+        //Get number of selected nodes and edges in single call
+        function getNumberOfSelectedElements() {
+            return [numberOfSelectedNodes, numberOfSelectedEdges];
+        }
+
+        //Get total numbers of nodes inside graph
+        function getTotalNodes() {
+            return cy.nodes(":inside").length;
+        }
+
+        //Show or hide labels for nodes
+        function showOrHideLabels(show) {
+            for (const [key, value] of Object.entries(labels)) {
+                if (show) {
+                    value.show();
+                }
+                else {
+                    value.hide();
+                }
+            }
+        }
+
+        function showOrHideTitle(show) {
+            cy.nodes().forEach(ele => {
+                if (show == true) {
+                    ele.data('title_type', "true");
+                }
+                else {
+                    ele.data('title_type', "none");
+                }
+            });
+        }
+
+        function showOrHideAssetEdges(show) {
+            cy.edges().forEach(ele => {
+                if (ele.data('type') == 'Asset') {
+                    if (show == true) {
+                        ele.data('opacity', 1)
+                    }
+                    else {
+                        ele.data('opacity', 0)
+                    }
+                };
+            });
+        }
+
+        //Increase font size for all selected nodes
+        function decreaseFontForSelected() {
+            //for each selected
+            cy.$(':selected').forEach(ele => {
+                if (ele.isNode()) {
+                    decreaseFontForNode(ele);
+                }
+            });
+        }
+
+        //Decrease font size for all selected nodes
+        function increaseFontForSelected() {
+            //for each selected
+            cy.$(':selected').forEach(ele => {
+                if (ele.isNode()) {
+                    increaseFontForNode(ele);
+                }
+            });
+        }
+
+        //Increase font size for node with id
+        function increaseFontForNode(node) {
+            if (node.data('titleSize') + 10 < 500) {
+                node.data('titleSize', node.data('titleSize') + 10);
+            }
+            else {
+                //500 - max font size
+                node.data('titleSize', 500);
+            }
+            bound.eventHandler('node', 'increaseFont', eventToJson(node.id()));
+        }
+
+        //Decrease font size for node with id
+        function decreaseFontForNode(node) {
+            if (node.data('titleSize') - 10 > 10) {
+                node.data('titleSize', node.data('titleSize') - 10);
+            }
+            else {
+                //1 - min font size
+                node.data('titleSize', 10);
+            }
+            bound.eventHandler('node', 'decreaseFont', eventToJson(node.id()));
+        }
+
+        //Update label with content of node
+        function setLabelContentForNode(id) {
+            var node = cy.getElementById(id);
+            var html = getHTMLForLabel_debug(id, node.data('controlBaseScore'), node.data('calculatedValue'), node.data('edgeStrengthValue'));
+            var instance = labels[id];
+            var div = document.createElement('div');
+            if (instance != null) {
+                div.innerHTML = html;
+                instance.setContent(div);
+            }
+        }
+
+        function getHTMLForEdgeLabel(id) {
+            var edge = cy.getElementById(id);
+            var edge_data = edge.data();
+            var edge_strength = edge_data["edgeStrength"] == undefined ? "" : edge_data["edgeStrength"];
+            var edge_strength_value = edge_data["edgeStrengthValue"] == undefined ? "" : edge_data["edgeStrengthValue"];
+            var edge_strength_min_value = edge_data["edgeStrengthMinValue"] == undefined ? "0" : edge_data["edgeStrengthMinValue"];
+            var edge_strength_max_value = edge_data["edgeStrenghtMaxValue"] == undefined ? "0" : edge_data["edgeStrengthMaxValue"];
+            var html =
+                `<table class="dummyClassForTipData" style="border-collapse: collapse;margin-top: 1rem" border="0" cellspacing="0" cellpadding="0">
+                        <tbody>
+                            <tr>
+                                <td nowrap> Edge Strength</td>
+                                <td nowrap style="text-align: right; padding-left: 10px;">${edge_strength}</td>
+                            </tr>
+                            <tr>
+                                <td nowrap>Edge Strength Value</td>
+                                <td nowrap style="text-align: right; padding-left: 10px;">${edge_strength_value}</td>
+                            </tr>
+                            <tr>
+                                <td nowrap>Edge Strength Min Value</td>
+                                <td nowrap style="text-align: right; padding-left: 10px;">${edge_strength_min_value}</td>
+                            </tr>
+                            <tr>
+                                <td nowrap>Edge Strength Max Value</td>
+                                <td nowrap style="text-align: right; padding-left: 10px;">${edge_strength_max_value}</td>
+                            </tr>
+                        </tbody>
+                    </table>`;
+            return html;
+        }
+
+        //Update label with content of node
+        function setLabelContentForEdge(id) {
+            var edge = cy.getElementById(id);
+            var html = getHTMLForEdgeLabel(id);
+            var instance = edge_labels[id];
+            var div = document.createElement('div');
+            if (instance != null) {
+                div.innerHTML = html;
+                instance.setContent(div);
+            }
+        }
+
+        function addLinkedNode(parentID, title, titleSize, size, color, border_color, shape, x, y) {
+            //Add node
+            addNodeWithObject({ title: title, titleSize: titleSize, height: height, width: width, color: color, border_color: border_color, x: x, y: y, })
+            //Add link from parent to latest
+            addEdge(parentID, lastNode.id());
+        }
+
+        function addNodeWithObject(data) {
+            if (data.description === undefined || data.description === null) {
+                data.description = '';
+            }
+
+            if (data.controlref === undefined) {
+                data.controlref = '';
+            }
+
+            if (data.controlframework === undefined) {
+                data.controlframework = '';
+            }
+
+            if (data.controlframeworkversion === undefined) {
+                data.controlframeworkversion = '';
+            }
+
+            if (data.controltype === undefined) {
+                data.controltype = 'control';
+            }
+
+            if (data.parentID === undefined) {
+                data.parentID = '';
+            }
+
+            if (data.textColor === undefined) {
+                data.textColor = "rgb(0,0,0)";
+            }
+
+            if (data.controlBaseScore === undefined) {
+                data.controlBaseScore = 0.0;
+            }
+            if (data.controlBaseValue === undefined) {
+                data.controlBaseValue = 0.0;
+            }
+            if (data.controlBaseMinValue === undefined) {
+                data.controlBaseMinValue = 0.0;
+            }
+
+            if (data.controlAssessedMinValue === undefined) {
+                data.controlAssessedMinValue = 0.0;
+            }
+
+            if (data.controlAssessedValue === undefined) {
+                data.controlAssessedValue = 0.0;
+            }
+
+            if (data.image === undefined) {
+                data.image = "";
+                data.background_opacity = "1";
+                data.border_opacity = "1";
+            }
+            else {
+                data.background_opacity = "0";
+            }
+
+            if (data.imagePath === undefined) {
+                data.imagePath = "";
+                data.background_opacity = "1";
+                data.border_opacity = "1";
+            }
+
+            if (data.position === undefined) {
+                data.position = "center";
+            }
+
+            if (data.note === undefined) {
+                data.note = "";
+            }
+
+            if (data.borderWidth === undefined) {
+                data.borderWidth = "1";
+            }
+
+            if (data.masterID === undefined) {
+                data.masterID = "";
+            }
+
+            if (data.height === undefined) {
+                data.height = "48";
+            }
+
+            if (data.width === undefined) {
+                data.width = "48";
+            }
+
+            if (data.AssetConfidentiality === undefined) {
+                data.AssetConfidentiality = data.assetConfidentiality === undefined ? "" : data.assetConfidentiality;
+            }
+
+            if (data.AssetConfidentialityValue === undefined) {
+                data.AssetConfidentialityValue = 0.0;
+            }
+
+            if (data.AssetConfidentialityMinValue === undefined) {
+                data.AssetConfidentialityMinValue = 0.0;
+            }
+
+            if (data.assetConfidentialityProbabilityValue === undefined) {
+                data.assetConfidentialityProbabilityValue = 0.0;
+            }
+
+            if (data.AssetIntegrity === undefined) {
+                data.AssetIntegrity = data.assetIntegrity === undefined ? "" : data.assetIntegrity;
+            }
+
+            if (data.AssetIntegrityValue === undefined) {
+                data.AssetIntegrityValue = 0.0;
+            }
+            if (data.AssetIntegrityMinValue === undefined) {
+                data.AssetIntegrityMinValue = 0.0;
+            }
+            if (data.assetIntegrityProbabilityValue === undefined) {
+                data.assetIntegrityProbabilityValue = 0.0;
+            }
+
+            if (data.AssetAvailability === undefined) {
+                data.AssetAvailability = data.assetAvailability === undefined ? "" : data.assetAvailability;
+            }
+
+            if (data.AssetAvailabilityValue === undefined) {
+                data.AssetAvailabilityValue = 0.0;
+            }
+            if (data.AssetAvailabilityMinValue === undefined) {
+                data.AssetAvailabilityMinValue = 0.0;
+            }
+            if (data.assetAvailabilityProbabilityValue === undefined) {
+                data.assetAvailabilityProbabilityValue = 0.0;
+            }
+
+            if (data.AssetAccountability === undefined) {
+                data.AssetAccountability = data.assetAccountability === undefined ? "" : data.assetAccountability;
+            }
+            if (data.AssetAccountabilityValue === undefined) {
+                data.AssetAccountabilityValue = 0.0;
+            }
+            if (data.AssetAccountabilityMinValue === undefined) {
+                data.AssetAccountabilityMinValue = 0.0;
+            }
+            if (data.assetAccountabilityProbabilityValue === undefined) {
+                data.assetAccountabilityProbabilityValue = 0.0;
+            }
+
+            if (data.ActorCapability === undefined) {
+                data.ActorCapability = data.actorCapability === undefined ? "" : data.actorCapability;
+            }
+
+            if (data.ActorCapabilityValue === undefined) {
+                data.ActorCapabilityValue = 0.0;
+            }
+            if (data.ActorCapabilityMinValue === undefined) {
+                data.ActorCapabilityMinValue = 0.0;
+            }
+
+            if (data.ActorResources === undefined) {
+                data.ActorResources = data.actorResources === undefined ? "" : data.actorResources;
+            }
+
+            if (data.ActorResourcesValue === undefined) {
+                data.ActorResourcesValue = 0.0;
+            }
+            if (data.ActorResourcesMinValue === undefined) {
+                data.ActorResourcesMinValue = 0.0;
+            }
+
+            if (data.ActorMotivation === undefined) {
+                data.ActorMotivation = data.actorMotivation === undefined ? "" : data.actorMotivation;
+            }
+
+            if (data.ActorMotivationValue === undefined) {
+                data.ActorMotivationValue = 0.0;
+            }
+            if (data.ActorMotivationMinValue === undefined) {
+                data.ActorMotivationMinValue = 0.0;
+            }
+
+            if (data.ActorAccess === undefined) {
+                data.ActorAccess = data.actorAccess === undefined ? "" : data.actorAccess;
+            }
+
+            if (data.ActorAccessValue === undefined) {
+                data.ActorAccessValue = 0.0;
+            }
+            if (data.ActorAccessMinValue === undefined) {
+                data.ActorAccessMinValue = 0.0;
+            }
+
+            if (data.ActorResources === undefined) {
+                data.ActorResources = data.actorResources === undefined ? "" : data.actorResources;
+            }
+
+            if (data.ActorResourcesValue === undefined) {
+                data.ActorResourcesValue = 0.0;
+            }
+            if (data.ActorResourcesMinValue === undefined) {
+                data.ActorResourcesMinValue = 0.0;
+            }
+
+            if (data.ActorImpactToConfidentialityValue === undefined) {
+                data.ActorImpactToConfidentialityValue = 0.0;
+            }
+            if (data.ActorImpactToConfidentialityMinValue === undefined) {
+                data.ActorImpactToConfidentialityMinValue = 0.0;
+            }
+            if (data.ActorImpactToIntegrityValue === undefined) {
+                data.ActorImpactToIntegrityValue = 0.0;
+            }
+            if (data.ActorImpactToIntegrityMinValue === undefined) {
+                data.ActorImpactToIntegrityMinValue = 0.0;
+            }
+            if (data.ActorImpactToAvailabilityValue === undefined) {
+                data.ActorImpactToAvailabilityValue = 0.0;
+            }
+            if (data.ActorImpactToAvailabilityMinValue === undefined) {
+                data.ActorImpactToAvailabilityMinValue = 0.0;
+            }
+            if (data.ActorImpactToAccountabilityValue === undefined) {
+                data.ActorImpactToAccountabilityValue = 0.0;
+            }
+            if (data.ActorImpactToAccountabilityMinValue === undefined) {
+                data.ActorImpactToAccountabilityMinValue = 0.0;
+            }
+
+            if (data.assetRegulatoryImpactAvailabilityValue === undefined) {
+                data.assetRegulatoryImpactAvailabilityValue = 0.0;
+            }
+            if (data.assetReputationalImpactAvailabilityValue === undefined) {
+                data.assetReputationalImpactAvailabilityValue = 0.0;
+            }
+            if (data.assetFinancialImpactAvailabilityValue === undefined) {
+                data.assetFinancialImpactAvailabilityValue = 0.0;
+            }
+            if (data.assetPrivacyImpactAccountabilityValue === undefined) {
+                data.assetPrivacyImpactAccountabilityValue = 0.0;
+            }
+            if (data.assetLegalImpactAccountabilityValue === undefined) {
+                data.assetLegalImpactAccountabilityValue = 0.0;
+            }
+            if (data.assetRegulatoryImpactAccountabilityValue === undefined) {
+                data.assetRegulatoryImpactAccountabilityValue = 0.0;
+            }
+            if (data.assetReputationalImpactAccountabilityValue === undefined) {
+                data.assetReputationalImpactAccountabilityValue = 0.0;
+            }
+            if (data.assetPrivacyImpactConfidentialityValue === undefined) {
+                data.assetPrivacyImpactConfidentialityValue = 0.0;
+            }
+            if (data.assetLegalImpactConfidentialityValue === undefined) {
+                data.assetLegalImpactConfidentialityValue = 0.0;
+            }
+            if (data.assetReputationalImpactConfidentialityValue === undefined) {
+                data.assetReputationalImpactConfidentialityValue = 0.0;
+            }
+            if (data.assetFinancialImpactConfidentialityValue === undefined) {
+                data.assetFinancialImpactConfidentialityValue = 0.0;
+            }
+            if (data.assetPrivacyImpactIntegrityValue === undefined) {
+                data.assetPrivacyImpactIntegrityValue = 0.0;
+            }
+            if (data.assetLegalImpactIntegrityValue === undefined) {
+                data.assetLegalImpactIntegrityValue = 0.0;
+            }
+            if (data.assetRegulatoryImpactIntegrityValue === undefined) {
+                data.assetRegulatoryImpactIntegrityValue = 0.0;
+            }
+            if (data.assetFinancialImpactIntegrityValue === undefined) {
+                data.assetFinancialImpactIntegrityValue = 0.0;
+            }
+            if (data.assetPrivacyImpactAvailabilityValue === undefined) {
+                data.assetPrivacyImpactAvailabilityValue = 0.0;
+            }
+            if (data.assetLegalImpactAvailabilityValue === undefined) {
+                data.assetLegalImpactAvailabilityValue = 0.0;
+            }
+            if (data.assetRegulatoryImpactConfidentiality === undefined) {
+                data.assetRegulatoryImpactConfidentiality = 0.0;
+            }
+            if (data.assetReputationalImpactIntegrityValue === undefined) {
+                data.assetReputationalImpactIntegrityValue = 0.0;
+            }
+            if (data.assetPrivacyImpactConfidentialityMinValue === undefined) {
+                data.assetPrivacyImpactConfidentialityMinValue = 0.0;
+            }
+            if (data.assetLegalImpactConfidentialityMinValue === undefined) {
+                data.assetLegalImpactConfidentialityMinValue = 0.0;
+            }
+            if (data.assetRegulatoryImpactConfidentialityValue === undefined) {
+                data.assetRegulatoryImpactConfidentialityValue = 0.0;
+            }
+            if (data.assetRegulatoryImpactConfidentialityMinValue === undefined) {
+                data.assetRegulatoryImpactConfidentialityMinValue = 0.0;
+            }
+            if (data.assetReputationalImpactConfidentialityMinValue === undefined) {
+                data.assetReputationalImpactConfidentialityMinValue = 0.0;
+            }
+            if (data.assetFinancialImpactConfidentialityMinValue === undefined) {
+                data.assetFinancialImpactConfidentialityMinValue = 0.0;
+            }
+            if (data.assetPrivacyImpactIntegrityMinValue === undefined) {
+                data.assetPrivacyImpactIntegrityMinValue = 0.0;
+            }
+            if (data.assetLegalImpactIntegrityMinValue === undefined) {
+                data.assetLegalImpactIntegrityMinValue = 0.0;
+            }
+            if (data.assetRegulatoryImpactIntegrityMinValue === undefined) {
+                data.assetRegulatoryImpactIntegrityMinValue = 0.0;
+            }
+            if (data.assetReputationalImpactIntegrityMinValue === undefined) {
+                data.assetReputationalImpactIntegrityMinValue = 0.0;
+            }
+            if (data.assetFinancialImpactIntegrityMinValue === undefined) {
+                data.assetFinancialImpactIntegrityMinValue = 0.0;
+            }
+            if (data.assetPrivacyImpactAvailabilityMinValue === undefined) {
+                data.assetPrivacyImpactAvailabilityMinValue = 0.0;
+            }
+            if (data.assetLegalImpactAvailabilityMinValue === undefined) {
+                data.assetLegalImpactAvailabilityMinValue = 0.0;
+            }
+            if (data.assetRegulatoryImpactAvailabilityMinValue === undefined) {
+                data.assetRegulatoryImpactAvailabilityMinValue = 0.0;
+            }
+            if (data.assetReputationalImpactAvailabilityMinValue === undefined) {
+                data.assetReputationalImpactAvailabilityMinValue = 0.0;
+            }
+            if (data.assetFinancialImpactAvailabilityMinValue === undefined) {
+                data.assetFinancialImpactAvailabilityMinValue = 0.0;
+            }
+            if (data.assetPrivacyImpactAccountabilityMinValue === undefined) {
+                data.assetPrivacyImpactAccountabilityMinValue = 0.0;
+            }
+            if (data.assetLegalImpactAccountabilityMinValue === undefined) {
+                data.assetLegalImpactAccountabilityMinValue = 0.0;
+            }
+            if (data.assetRegulatoryImpactAccountabilityMinValue === undefined) {
+                data.assetRegulatoryImpactAccountabilityMinValue = 0.0;
+            }
+            if (data.assetReputationalImpactAccountabilityMinValue === undefined) {
+                data.assetReputationalImpactAccountabilityMinValue = 0.0;
+            }
+            if (data.assetFinancialImpactAccountabilityValue === undefined) {
+                data.assetFinancialImpactAccountabilityValue = 0.0;
+            }
+            if (data.assetFinancialImpactAccountabilityMinValue === undefined) {
+                data.assetFinancialImpactAccountabilityMinValue = 0.0;
+            }
+
+            if (data.AttackComplexity === undefined) {
+                data.AttackComplexity = data.attackComplexity === undefined ? "" : data.attackComplexity;
+            }
+
+            if (data.AttackComplexityValue === undefined) {
+                data.AttackComplexityValue = 0.0;
+            }
+            if (data.AttackComplexityMinValue === undefined) {
+                data.AttackComplexityMinValue = 0.0;
+            }
+
+            if (data.AttackProliferation === undefined) {
+                data.AttackProliferation = data.attackProliferation === undefined ? "" : data.attackProliferation;
+            }
+
+            if (data.AttackProliferationValue === undefined) {
+                data.AttackProliferationValue = data.attackProliferationValue === undefined ? "" : data.attackProliferationValue;
+            }
+
+            if (data.AttackProliferationMinValue === undefined) {
+                data.AttackProliferationMinValue = data.AttackProliferationMinValue === undefined ? "" : data.AttackProliferationMinValue;
+            }
+
+            if (data.AttackImpactToConfidentialityValue === undefined) {
+                data.AttackImpactToConfidentialityValue = data.AttackImpactToConfidentialityValue === undefined ? "" : data.AttackImpactToConfidentialityValue;
+            }
+            if (data.AttackImpactToConfidentialityMinValue === undefined) {
+                data.AttackImpactToConfidentialityMinValue = data.AttackImpactToConfidentialityMinValue === undefined ? "" : data.AttackImpactToConfidentialityMinValue;
+            }
+
+            if (data.AttackImpactToIntegrityValue === undefined) {
+                data.AttackImpactToIntegrityValue = data.AttackImpactToIntegrityValue === undefined ? "" : data.AttackImpactToIntegrityValue;
+            }
+            if (data.AttackImpactToIntegrityMinValue === undefined) {
+                data.AttackImpactToIntegrityMinValue = data.AttackImpactToIntegrityMinValue === undefined ? "" : data.AttackImpactToIntegrityMinValue;
+            }
+
+            if (data.AttackImpactToAvailabilityValue === undefined) {
+                data.AttackImpactToAvailabilityValue = data.AttackImpactToAvailabilityValue === undefined ? "" : data.AttackImpactToAvailabilityValue;
+            }
+            if (data.AttackImpactToAvailabilityMinValue === undefined) {
+                data.AttackImpactToAvailabilityMinValue = data.AttackImpactToAvailabilityMinValue === undefined ? "" : data.AttackImpactToAvailabilityMinValue;
+            }
+
+            if (data.AttackImpactToAccountabilityValue === undefined) {
+                data.AttackImpactToAccountabilityValue = data.AttackImpactToAccountabilityValue === undefined ? "" : data.AttackImpactToAccountabilityValue;
+            }
+            if (data.AttackImpactToAccountabilityMinValue === undefined) {
+                data.AttackImpactToAccountabilityMinValue = data.AttackImpactToAccountabilityMinValue === undefined ? "" : data.AttackImpactToAccountabilityMinValue;
+            }
+
+            if (data.vulnerabilityEaseOfExploitationText === undefined) {
+                data.vulnerabilityEaseOfExploitationText = data.vulnerabilityEaseOfExploitationText === undefined ? "" : data.vulnerabilityEaseOfExploitationText;
+            }
+
+            if (data.VulnerabilityExposureText === undefined) {
+                data.VulnerabilityExposureText = data.VulnerabilityExposureText === undefined ? "" : data.VulnerabilityExposureText;
+            }
+
+            if (data.VulnerabilityImpactToConfidentialityText === undefined) {
+                data.VulnerabilityImpactToConfidentialityText = data.VulnerabilityImpactToConfidentialityText === undefined ? "" : data.VulnerabilityImpactToConfidentialityText;
+            }
+
+            if (data.VulnerabilityImpactToIntegrityText === undefined) {
+                data.VulnerabilityImpactToIntegrityText = data.VulnerabilityImpactToIntegrityText === undefined ? "" : data.VulnerabilityImpactToIntegrityText;
+            }
+
+            if (data.VulnerabilityImpactToAvailabilityText === undefined) {
+                data.VulnerabilityImpactToAvailabilityText = data.VulnerabilityImpactToAvailabilityText === undefined ? "" : data.VulnerabilityImpactToAvailabilityText;
+            }
+
+            if (data.VulnerabilityImpactToAccountabilityText === undefined) {
+                data.VulnerabilityImpactToAccountabilityText = data.VulnerabilityImpactToAccountabilityText === undefined ? "" : data.VulnerabilityImpactToAccountabilityText;
+            }
+
+            if (data.vulnerabilityEaseOfExploitationValue === undefined) {
+                data.vulnerabilityEaseOfExploitationValue = data.vulnerabilityEaseOfExploitationValue === undefined ? "" : data.vulnerabilityEaseOfExploitationValue;
+            }
+            if (data.vulnerabilityEaseOfExploitationMinValue === undefined) {
+                data.vulnerabilityEaseOfExploitationMinValue = data.vulnerabilityEaseOfExploitationMinValue === undefined ? "" : data.vulnerabilityEaseOfExploitationMinValue;
+            }
+
+            if (data.VulnerabilityExposureValue === undefined) {
+                data.VulnerabilityExposureValue = data.VulnerabilityExposureValue === undefined ? "" : data.VulnerabilityExposureValue;
+            }
+            if (data.VulnerabilityExposureMinValue === undefined) {
+                data.VulnerabilityExposureMinValue = data.VulnerabilityExposureMinValue === undefined ? "" : data.VulnerabilityExposureMinValue;
+            }
+
+            if (data.vulnerabilityPrivilegesRequiredValue === undefined) {
+                data.vulnerabilityPrivilegesRequiredValue = data.vulnerabilityPrivilegesRequiredValue === undefined ? "" : data.vulnerabilityPrivilegesRequiredValue;
+            }
+            if (data.vulnerabilityPrivilegesRequiredMinValue === undefined) {
+                data.vulnerabilityPrivilegesRequiredMinValue = data.vulnerabilityPrivilegesRequiredMinValue === undefined ? "" : data.vulnerabilityPrivilegesRequiredMinValue;
+            }
+
+            if (data.vulnerabilityInteractionRequiredValue === undefined) {
+                data.vulnerabilityInteractionRequiredValue = data.vulnerabilityInteractionRequiredValue === undefined ? "" : data.vulnerabilityInteractionRequiredValue;
+            }
+            if (data.vulnerabilityInteractionRequiredMinValue === undefined) {
+                data.vulnerabilityInteractionRequiredMinValue = data.vulnerabilityInteractionRequiredMinValue === undefined ? "" : data.vulnerabilityInteractionRequiredMinValue;
+            }
+
+            if (data.vulnerabilityExposesScopeValue === undefined) {
+                data.vulnerabilityExposesScopeValue = data.vulnerabilityExposesScopeValue === undefined ? "" : data.vulnerabilityExposesScopeValue;
+            }
+            if (data.vulnerabilityExposesScopeMinValue === undefined) {
+                data.vulnerabilityExposesScopeMinValue = data.vulnerabilityExposesScopeMinValue === undefined ? "" : data.vulnerabilityExposesScopeMinValue;
+            }
+
+            if (data.VulnerabilityImpactToConfidentialityValue === undefined) {
+                data.VulnerabilityImpactToConfidentialityValue = data.VulnerabilityImpactToConfidentialityValue === undefined ? "" : data.VulnerabilityImpactToConfidentialityValue;
+            }
+            if (data.VulnerabilityImpactToConfidentialityMinValue === undefined) {
+                data.VulnerabilityImpactToConfidentialityMinValue = data.VulnerabilityImpactToConfidentialityMinValue === undefined ? "" : data.VulnerabilityImpactToConfidentialityMinValue;
+            }
+
+            if (data.VulnerabilityImpactToIntegrityValue === undefined) {
+                data.VulnerabilityImpactToIntegrityValue = data.VulnerabilityImpactToIntegrityValue === undefined ? "" : data.VulnerabilityImpactToIntegrityValue;
+            }
+            if (data.VulnerabilityImpactToIntegrityMinValue === undefined) {
+                data.VulnerabilityImpactToIntegrityMinValue = data.VulnerabilityImpactToIntegrityMinValue === undefined ? "" : data.VulnerabilityImpactToIntegrityMinValue;
+            }
+
+            if (data.VulnerabilityImpactToAvailabilityValue === undefined) {
+                data.VulnerabilityImpactToAvailabilityValue = data.VulnerabilityImpactToAvailabilityValue === undefined ? "" : data.VulnerabilityImpactToAvailabilityValue;
+            }
+            if (data.VulnerabilityImpactToAvailabilityMinValue === undefined) {
+                data.VulnerabilityImpactToAvailabilityMinValue = data.VulnerabilityImpactToAvailabilityMinValue === undefined ? "" : data.VulnerabilityImpactToAvailabilityMinValue;
+            }
+
+            if (data.VulnerabilityImpactToAccountabilityValue === undefined) {
+                data.VulnerabilityImpactToAccountabilityValue = data.VulnerabilityImpactToAccountabilityValue === undefined ? "" : data.VulnerabilityImpactToAccountabilityValue;
+            }
+            if (data.VulnerabilityImpactToAccountabilityMinValue === undefined) {
+                data.VulnerabilityImpactToAccountabilityMinValue = data.VulnerabilityImpactToAccountabilityMinValue === undefined ? "" : data.VulnerabilityImpactToAccountabilityMinValue;
+            }
+
+            if (data.controlBaseDistribution === undefined) {
+                data.controlBaseDistribution = data.controlBaseDistribution === undefined ? "" : data.controlBaseDistribution;
+            }
+
+            if (data.controlAssessedDistribution === undefined) {
+                data.controlAssessedDistribution = data.controlAssessedDistribution === undefined ? "" : data.controlAssessedDistribution;
+            }
+
+            if (data.actorAccessDistribution === undefined) {
+                data.actorAccessDistribution = data.actorAccessDistribution === undefined ? "" : data.actorAccessDistribution;
+            }
+
+            if (data.actorCapabilityDistribution === undefined) {
+                data.actorCapabilityDistribution = data.actorCapabilityDistribution === undefined ? "" : data.actorCapabilityDistribution;
+            }
+
+            if (data.actorResourcesDistribution === undefined) {
+                data.actorResourcesDistribution = data.actorResourcesDistribution === undefined ? "" : data.actorResourcesDistribution;
+            }
+
+            if (data.actorMotivationDistribution === undefined) {
+                data.actorMotivationDistribution = data.actorMotivationDistribution === undefined ? "" : data.actorMotivationDistribution;
+            }
+
+            if (data.actorImpactToConfidentialityDistribution === undefined) {
+                data.actorImpactToConfidentialityDistribution = data.actorImpactToConfidentialityDistribution === undefined ? "" : data.actorImpactToConfidentialityDistribution;
+            }
+
+            if (data.actorImpactToIntegrityDistribution === undefined) {
+                data.actorImpactToIntegrityDistribution = data.actorImpactToIntegrityDistribution === undefined ? "" : data.actorImpactToIntegrityDistribution;
+            }
+
+            if (data.actorImpactToAvailabilityDistribution === undefined) {
+                data.actorImpactToAvailabilityDistribution = data.actorImpactToAvailabilityDistribution === undefined ? "" : data.actorImpactToAvailabilityDistribution;
+            }
+
+            if (data.actorImpactToAccountabilityDistribution === undefined) {
+                data.actorImpactToAccountabilityDistribution = data.actorImpactToAccountabilityDistribution === undefined ? "" : data.actorImpactToAccountabilityDistribution;
+            }
+
+            if (data.vulnerabilityEaseOfExploitationDistribution === undefined) {
+                data.vulnerabilityEaseOfExploitationDistribution = data.vulnerabilityEaseOfExploitationDistribution === undefined ? "" : data.vulnerabilityEaseOfExploitationDistribution;
+            }
+
+            if (data.vulnerabilityExposesScopeDistribution === undefined) {
+                data.vulnerabilityExposesScopeDistribution = data.vulnerabilityExposesScopeDistribution === undefined ? "" : data.vulnerabilityExposesScopeDistribution;
+            }
+
+            if (data.vulnerabilityInteractionRequiredDistribution === undefined) {
+                data.vulnerabilityInteractionRequiredDistribution = data.vulnerabilityInteractionRequiredDistribution === undefined ? "" : data.vulnerabilityInteractionRequiredDistribution;
+            }
+
+            if (data.vulnerabilityPrivilegesRequiredDistribution === undefined) {
+                data.vulnerabilityPrivilegesRequiredDistribution = data.vulnerabilityPrivilegesRequiredDistribution === undefined ? "" : data.vulnerabilityPrivilegesRequiredDistribution;
+            }
+
+            if (data.vulnerabilityExposureDistribution === undefined) {
+                data.vulnerabilityExposureDistribution = data.vulnerabilityExposureDistribution === undefined ? "" : data.vulnerabilityExposureDistribution;
+            }
+
+            if (data.vulnerabilityImpactToConfidentialityDistribution === undefined) {
+                data.vulnerabilityImpactToConfidentialityDistribution = data.vulnerabilityImpactToConfidentialityDistribution === undefined ? "" : data.vulnerabilityImpactToConfidentialityDistribution;
+            }
+
+            if (data.vulnerabilityImpactToIntegrityDistribution === undefined) {
+                data.vulnerabilityImpactToIntegrityDistribution = data.vulnerabilityImpactToIntegrityDistribution === undefined ? "" : data.vulnerabilityImpactToIntegrityDistribution;
+            }
+
+            if (data.vulnerabilityImpactToAvailabilityDistribution === undefined) {
+                data.vulnerabilityImpactToAvailabilityDistribution = data.vulnerabilityImpactToAvailabilityDistribution === undefined ? "" : data.vulnerabilityImpactToAvailabilityDistribution;
+            }
+
+            if (data.vulnerabilityImpactToAccountabilityDistribution === undefined) {
+                data.vulnerabilityImpactToAccountabilityDistribution = data.vulnerabilityImpactToAccountabilityDistribution === undefined ? "" : data.vulnerabilityImpactToAccountabilityDistribution;
+            }
+            if (data.attackComplexityDistribution === undefined) {
+                data.attackComplexityDistribution = data.attackComplexityDistribution === undefined ? "" : data.attackComplexityDistribution;
+            }
+            if (data.attackProliferationDistribution === undefined) {
+                data.attackProliferationDistribution = data.attackProliferationDistribution === undefined ? "" : data.attackProliferationDistribution;
+            }
+            if (data.attackImpactToConfidentialityDistribution === undefined) {
+                data.attackImpactToConfidentialityDistribution = data.attackImpactToConfidentialityDistribution === undefined ? "" : data.attackImpactToConfidentialityDistribution;
+            }
+            if (data.attackImpactToIntegrityDistribution === undefined) {
+                data.attackImpactToIntegrityDistribution = data.attackImpactToIntegrityDistribution === undefined ? "" : data.attackImpactToIntegrityDistribution;
+            }
+            if (data.attackImpactToAvailabilityDistribution === undefined) {
+                data.attackImpactToAvailabilityDistribution = data.attackImpactToAvailabilityDistribution === undefined ? "" : data.attackImpactToAvailabilityDistribution;
+            }
+            if (data.attackImpactToAccountabilityDistribution === undefined) {
+                data.attackImpactToAccountabilityDistribution = data.attackImpactToAccountabilityDistribution === undefined ? "" : data.attackImpactToAccountabilityDistribution;
+            }
+            if (data.assetConfidentialityDistribution === undefined) {
+                data.assetConfidentialityDistribution = data.assetConfidentialityDistribution === undefined ? "" : data.assetConfidentialityDistribution;
+            }
+            if (data.assetIntegrityDistribution === undefined) {
+                data.assetIntegrityDistribution = data.assetIntegrityDistribution === undefined ? "" : data.assetIntegrityDistribution;
+            }
+            if (data.assetAvailabilityDistribution === undefined) {
+                data.assetAvailabilityDistribution = data.assetAvailabilityDistribution === undefined ? "" : data.assetAvailabilityDistribution;
+            }
+            if (data.assetAccountabilityDistribution === undefined) {
+                data.assetAccountabilityDistribution = data.assetAccountabilityDistribution === undefined ? "" : data.assetAccountabilityDistribution;
+            }
+            if (data.assetPrivacyImpactConfidentialityDistribution === undefined) {
+                data.assetPrivacyImpactConfidentialityDistribution = data.assetPrivacyImpactConfidentialityDistribution === undefined ? "" : data.assetPrivacyImpactConfidentialityDistribution;
+            }
+            if (data.assetLegalImpactConfidentialityDistribution === undefined) {
+                data.assetLegalImpactConfidentialityDistribution = data.assetLegalImpactConfidentialityDistribution === undefined ? "" : data.assetLegalImpactConfidentialityDistribution;
+            }
+            if (data.assetRegulatoryImpactConfidentialityDistribution === undefined) {
+                data.assetRegulatoryImpactConfidentialityDistribution = data.assetRegulatoryImpactConfidentialityDistribution === undefined ? "" : data.assetRegulatoryImpactConfidentialityDistribution;
+            }
+            if (data.assetReputationalImpactConfidentialityDistribution === undefined) {
+                data.assetReputationalImpactConfidentialityDistribution = data.assetReputationalImpactConfidentialityDistribution === undefined ? "" : data.assetReputationalImpactConfidentialityDistribution;
+            }
+            if (data.assetFinancialImpactConfidentialityDistribution === undefined) {
+                data.assetFinancialImpactConfidentialityDistribution = data.assetFinancialImpactConfidentialityDistribution === undefined ? "" : data.assetFinancialImpactConfidentialityDistribution;
+            }
+            if (data.assetPrivacyImpactIntegrityDistribution === undefined) {
+                data.assetPrivacyImpactIntegrityDistribution = data.assetPrivacyImpactIntegrityDistribution === undefined ? "" : data.assetPrivacyImpactIntegrityDistribution;
+            }
+            if (data.assetLegalImpactIntegrityDistribution === undefined) {
+                data.assetLegalImpactIntegrityDistribution = data.assetLegalImpactIntegrityDistribution === undefined ? "" : data.assetLegalImpactIntegrityDistribution;
+            }
+            if (data.assetReputationalImpactIntegrityDistribution === undefined) {
+                data.assetReputationalImpactIntegrityDistribution = data.assetReputationalImpactIntegrityDistribution === undefined ? "" : data.assetReputationalImpactIntegrityDistribution;
+            }
+            if (data.assetRegulatoryImpactIntegrityDistribution === undefined) {
+                data.assetRegulatoryImpactIntegrityDistribution = data.assetRegulatoryImpactIntegrityDistribution === undefined ? "" : data.assetRegulatoryImpactIntegrityDistribution;
+            }
+            if (data.assetFinancialImpactIntegrityDistribution === undefined) {
+                data.assetFinancialImpactIntegrityDistribution = data.assetFinancialImpactIntegrityDistribution === undefined ? "" : data.assetFinancialImpactIntegrityDistribution;
+            }
+            if (data.assetPrivacyImpactAvailabilityDistribution === undefined) {
+                data.assetPrivacyImpactAvailabilityDistribution = data.assetPrivacyImpactAvailabilityDistribution === undefined ? "" : data.assetPrivacyImpactAvailabilityDistribution;
+            }
+            if (data.assetLegalImpactAvailabilityDistribution === undefined) {
+                data.assetLegalImpactAvailabilityDistribution = data.assetLegalImpactAvailabilityDistribution === undefined ? "" : data.assetLegalImpactAvailabilityDistribution;
+            }
+            if (data.assetRegulatoryImpactAvailabilityDistribution === undefined) {
+                data.assetRegulatoryImpactAvailabilityDistribution = data.assetRegulatoryImpactAvailabilityDistribution === undefined ? "" : data.assetRegulatoryImpactAvailabilityDistribution;
+            }
+            if (data.assetReputationalImpactAvailabilityDistribution === undefined) {
+                data.assetReputationalImpactAvailabilityDistribution = data.assetReputationalImpactAvailabilityDistribution === undefined ? "" : data.assetReputationalImpactAvailabilityDistribution;
+            }
+            if (data.assetFinancialImpactAvailabilityDistribution === undefined) {
+                data.assetFinancialImpactAvailabilityDistribution = data.assetFinancialImpactAvailabilityDistribution === undefined ? "" : data.assetFinancialImpactAvailabilityDistribution;
+            }
+            if (data.assetPrivacyImpactAccountabilityDistribution === undefined) {
+                data.assetPrivacyImpactAccountabilityDistribution = data.assetPrivacyImpactAccountabilityDistribution === undefined ? "" : data.assetPrivacyImpactAccountabilityDistribution;
+            }
+            if (data.assetLegalImpactAccountabilityDistribution === undefined) {
+                data.assetLegalImpactAccountabilityDistribution = data.assetLegalImpactAccountabilityDistribution === undefined ? "" : data.assetLegalImpactAccountabilityDistribution;
+            }
+            if (data.assetRegulatoryImpactAccountabilityDistribution === undefined) {
+                data.assetRegulatoryImpactAccountabilityDistribution = data.assetRegulatoryImpactAccountabilityDistribution === undefined ? "" : data.assetRegulatoryImpactAccountabilityDistribution;
+            }
+            if (data.assetReputationalImpactAccountabilityDistribution === undefined) {
+                data.assetReputationalImpactAccountabilityDistribution = data.assetReputationalImpactAccountabilityDistribution === undefined ? "" : data.assetReputationalImpactAccountabilityDistribution;
+            }
+            if (data.assetFinancialImpactAccountabilityDistribution === undefined) {
+                data.assetFinancialImpactAccountabilityDistribution = data.assetFinancialImpactAccountabilityDistribution === undefined ? "" : data.assetFinancialImpactAccountabilityDistribution;
+            }
+            if (data.assetConfidentialityLikelihoodScore === undefined) {
+                data.assetConfidentialityLikelihoodScore = data.assetConfidentialityLikelihoodScore === undefined ? 0.0 : data.assetConfidentialityMitigatedScore;
+            }
+            if (data.assetIntegrityMitigatedScore === undefined) {
+                data.assetIntegrityMitigatedScore = data.assetIntegrityMitigatedScore === undefined ? 0.0 : data.assetIntegrityMitigatedScore;
+            }
+            if (data.assetAvailabilityMitigatedScore === undefined) {
+                data.assetAvailabilityMitigatedScore = data.assetAvailabilityMitigatedScore === undefined ? 0.0 : data.assetAvailabilityMitigatedScore;
+            }
+            if (data.assetAccountabilityMitigatedScore === undefined) {
+                data.assetAccountabilityMitigatedScore = data.assetAccountabilityMitigatedScore === undefined ? 0.0 : data.assetAccountabilityMitigatedScore;
+            }
+
+            if (data.objectiveTargetType === undefined) {
+                data.objectiveTargetType = data.objectiveTargetType === undefined ? 0.0 : data.objectiveTargetType;
+            }
+
+            if (data.objectiveAcheivedValue === undefined) {
+                data.objectiveAcheivedValue = data.objectiveAcheivedValue === undefined ? 0.0 : data.objectiveAcheivedValue;
+            }
+
+            if (data.objectiveTargetValue === undefined) {
+                data.objectiveTargetValue = data.objectiveTargetValue === undefined ? 0.0 : data.objectiveTargetValue;
+            }
+
+            if (data.primaryCategory === undefined) {
+                data.primaryCategory = "";
+            }
+
+            if (data.subCategory === undefined) {
+                data.subCategory = "";
+            }
+
+            if (data.nodeBehaviour === undefined) {
+                data.nodeBehaviour = "Sum";
+            }
+
+            if (data.evidenceConfidenceValue === undefined) {
+                data.evidenceConfidenceValue = "0";
+            }
+
+            if (data.x === undefined || data.y === undefined) {
+                var zoom = cy.zoom();
+                var pan_pos = cy.pan();
+                var width = cy.width();
+                var height = cy.height();
+                var center_pos_x = ((-1) * pan_pos.x + width / 2) * zoom;
+                var center_pos_y = ((-1) * pan_pos.y + height / 2) * zoom;
+                var sign = (Math.random() * 2) > 1 ? 1 : -1;
+                var offset_x = sign * Math.random() * 150 * zoom;
+                sign = (Math.random() * 2) > 1 ? 1 : -1;
+                var offset_y = sign * Math.random() * 150 * zoom;
+
+                data.x = center_pos_x + offset_x;
+                data.y = center_pos_y + offset_y;
+            }
+
+            if (data.controlref == "" && (data.frameworkReference != undefined && data.frameworkReference != "")){
+                data.controlref = data.frameworkReference;
+            }
+            if (data.controlframeworkversion == "" && (data.frameworkNameVersion != undefined && data.frameworkNameVersion != "")){
+                data.controlframeworkversion = data.frameworkNameVersion;
+            }
+            if (data.controlframework == "" && (data.frameworkName != undefined && data.frameworkName != "")){
+                data.controlframework = data.frameworkName;
+            }
+            if (data.level == undefined ){
+                data.level = "";
+            }
+            if (data.metatags == undefined) {
+                data.metatags = "";
+            }
+
+
+            data.controltype = data.controltype.toLowerCase();
+            cy.add({
+                group: 'nodes',
+                enabled: true,
+                classes: data.nodeid,
+                data: {
+                    'createFlag': 1,
+                    'fontFamily': "Segoe UI",
+                    'fontWeight': "100",
+                    'fontStyle': 'normal',
+                    'textDecoration': "solid",
+                    'id': data.nodeid,
+                    'masterID': data.masterID,
+                    //'title': function (ele) { return getShowingTitle(ele) },
+                    'title': data.title,
+                    'titleSize': data.titleSize,
+                    'titleTextColor': data.textColor,
+                    'title_type': g_title_type,
+                    'text-valign': data.textAlignment,
+                    'width': data.width,
+                    'height': data.height,
+                    'size': data.size,
+                    'shape': data.imagePath == "" ? data.shape : "rectangle",
+                    'color': data.imagePath == "" ? data.color : "rgb(255,255,255)",
+                    'border_color': data.imagePath == "" ? data.border_color : "rgb(255,255,255)",
+                    'borderWidth': data.borderWidth,
+                    'origin_shape': data.shape,
+                    'origin_color': data.color,
+                    'enabled': true,
+                    'opacity': 1.0,
+                    'controlBaseScore': data.controlBaseScore,
+                    'controlBaseValue': data.controlBaseValue,
+                    'controlBaseMinValue': data.controlBaseMinValue,
+                    'calculatedValue': 0.0,
+                    'controlAssessedValue': data.controlAssessedValue,
+                    'controlAssessedMinValue': data.controlAssessedMinValue,
+                    'AssessedStatus': true,
+                    'domain': data.domain == undefined ? "" : data.domain,
+                    'subdomain': data.subdomain == undefined ? "" : data.subdomain,
+                    'refurl': data.refurl == undefined ? "" : data.refurl,
+                    'description': data.description,
+                    'note': data.note,
+                    'frameworkReference': data.controlref,
+                    'frameworkNameVersion': data.controlframeworkversion,
+                    'frameworkName': data.controlframework,
+                    'category': '',
+                    'level': data.level,
+                    'nodeType': data.controltype,
+                    'primaryCategory': data.primaryCategory,
+                    'subCategory': data.subCategory,
+                    'implementedStrength': data.implementedStrength,
+                    'parent': data.parentID,
+                    'image': data.image,
+                    'imagePath': data.imagePath,
+                    'metatags': data.metatags,
+                    'position': data.position,
+                    'background_opacity': data.background_opacity,
+                    'border_opacity': data.border_opacity,
+                    'x': data.x,
+                    'y': data.y,
+
+                    'objectiveTargetType': data.objectiveTargetType,
+                    'objectiveTargetValue': data.objectiveTargetValue,
+                    'objectiveAcheivedValue': data.objectiveAcheivedValue,
+
+                    'assetConfidentiality': data.AssetConfidentiality,
+                    'assetConfidentialityValue': data.AssetConfidentialityValue,
+                    'assetConfidentialityMinValue': data.AssetConfidentialityMinValue,
+                    'assetConfidentialityProbabilityValue': data.assetConfidentialityProbabilityValue,
+                    'assetIntegrity': data.AssetIntegrity,
+                    'assetIntegrityValue': data.AssetIntegrityValue,
+                    'assetIntegrityMinValue': data.AssetIntegrityMinValue,
+                    'assetAvailability': data.AssetAvailability,
+                    'assetAvailabilityValue': data.AssetAvailabilityValue,
+                    'assetAvailabilityMinValue': data.AssetAvailabilityMinValue,
+                    'assetAccountability': data.AssetAccountability,
+                    'assetAccountabilityValue': data.AssetAccountabilityValue,
+                    'assetAccountabilityMinValue': data.AssetAccountabilityMinValue,
+
+                    'actorCapability': data.ActorCapability,
+                    'actorCapabilityValue': data.ActorCapabilityValue,
+                    'actorCapabilityMinValue': data.ActorCapabilityMinValue,
+                    'actorResources': data.ActorResources,
+                    'actorResourcesValue': data.ActorResourcesValue,
+                    'actorResourcesMinValue': data.ActorResourcesMinValue,
+                    'actorMotivation': data.ActorMotivation,
+                    'actorMotivationValue': data.ActorMotivationValue,
+                    'actorMotivationMinValue': data.ActorMotivationMinValue,
+                    'actorAccess': data.ActorAccess,
+                    'actorAccessValue': data.ActorAccessValue,
+                    'actorAccessMinValue': data.ActorAccessMinValue,
+                    'actorImpactToConfidentialityValue': data.ActorImpactToConfidentialityValue,
+                    'actorImpactToConfidentialityMinValue': data.ActorImpactToConfidentialityMinValue,
+                    'actorImpactToIntegrityValue': data.ActorImpactToIntegrityValue,
+                    'actorImpactToIntegrityMinValue': data.ActorImpactToIntegrityMinValue,
+                    'actorImpactToAvailabilityValue': data.ActorImpactToAvailabilityValue,
+                    'actorImpactToAvailabilityMinValue': data.ActorImpactToAvailabilityMinValue,
+                    'actorImpactToAccountabilityValue': data.ActorImpactToAccountabilityValue,
+                    'actorImpactToAccountabilityMinValue': data.ActorImpactToAccountabilityMinValue,
+
+                    'attackComplexity': data.AttackComplexity,
+                    'attackComplexityValue': data.AttackComplexityValue,
+                    'attackComplexityMinValue': data.AttackComplexityMinValue,
+                    'attackProliferation': data.AttackProliferation,
+                    'attackProliferationValue': data.AttackProliferationValue,
+                    'attackProliferationMinValue': data.AttackProliferationMinValue,
+                    'attackImpactToConfidentialityValue': data.AttackImpactToConfidentialityValue,
+                    'attackImpactToConfidentialityMinValue': data.AttackImpactToConfidentialityMinValue,
+                    'attackImpactToIntegrityValue': data.AttackImpactToIntegrityValue,
+                    'attackImpactToIntegrityMinValue': data.AttackImpactToIntegrityMinValue,
+                    'attackImpactToAvailabilityValue': data.AttackImpactToAvailabilityValue,
+                    'attackImpactToAvailabilityMinValue': data.AttackImpactToAvailabilityMinValue,
+                    'attackImpactToAccountabilityValue': data.AttackImpactToAccountabilityValue,
+                    'attackImpactToAccountabilityMinValue': data.AttackImpactToAccountabilityMinValue,
+
+                    'vulnerabilityEaseOfExploitationValue': data.vulnerabilityEaseOfExploitationValue,
+                    'vulnerabilityEaseOfExploitationMinValue': data.vulnerabilityEaseOfExploitationMinValue,
+                    'vulnerabilityExposureValue': data.VulnerabilityExposureValue,
+                    'vulnerabilityExposureMinValue': data.VulnerabilityExposureMinValue,
+                    'vulnerabilityPrivilegesRequiredValue': data.vulnerabilityPrivilegesRequiredValue,
+                    'vulnerabilityPrivilegesRequiredMinValue': data.vulnerabilityPrivilegesRequiredMinValue,
+                    'vulnerabilityInteractionRequiredValue': data.vulnerabilityInteractionRequiredValue,
+                    'vulnerabilityInteractionRequiredMinValue': data.vulnerabilityInteractionRequiredMinValue,
+                    'vulnerabilityExposesScopeValue': data.vulnerabilityExposesScopeValue,
+                    'vulnerabilityExposesMinValue': data.VulnerabilityExposesMinValue,
+                    'vulnerabilityImpactToConfidentialityValue': data.VulnerabilityImpactToConfidentialityValue,
+                    'vulnerabilityImpactToConfidentialityMinValue': data.VulnerabilityImpactToConfidentialityMinValue,
+                    'vulnerabilityImpactToIntegrityValue': data.VulnerabilityImpactToIntegrityValue,
+                    'vulnerabilityImpactToIntegrityMinValue': data.VulnerabilityImpactToIntegrityMinValue,
+                    'vulnerabilityImpactToAvailabilityValue': data.VulnerabilityImpactToAvailabilityValue,
+                    'vulnerabilityImpactToAvailabilityMinValue': data.VulnerabilityImpactToAvailabilityMinValue,
+                    'vulnerabilityImpactToAccountabilityValue': data.VulnerabilityImpactToAccountabilityValue,
+                    'vulnerabilityImpactToAccountabilityMinValue': data.VulnerabilityImpactToAccountabilityMinValue,
+
+                    'assetRegulatoryImpactAvailabilityValue': data.assetRegulatoryImpactAvailabilityValue,
+                    'assetReputationalImpactAvailabilityValue': data.assetReputationalImpactAvailabilityValue,
+                    'assetFinancialImpactAvailabilityValue': data.assetFinancialImpactAvailabilityValue,
+                    'assetPrivacyImpactAccountabilityValue': data.assetPrivacyImpactAccountabilityValue,
+                    'assetLegalImpactAccountabilityValue': data.assetLegalImpactAccountabilityValue,
+                    'assetRegulatoryImpactAccountabilityValue': data.assetRegulatoryImpactAccountabilityValue,
+                    'assetReputationalImpactAccountabilityValue': data.assetReputationalImpactAccountabilityValue,
+                    'assetPrivacyImpactConfidentialityValue': data.assetPrivacyImpactConfidentialityValue,
+                    'assetLegalImpactConfidentialityValue': data.assetLegalImpactConfidentialityValue,
+                    'assetReputationalImpactConfidentialityValue': data.assetReputationalImpactConfidentialityValue,
+                    'assetFinancialImpactConfidentialityValue': data.assetFinancialImpactConfidentialityValue,
+                    'assetPrivacyImpactIntegrityValue': data.assetPrivacyImpactIntegrityValue,
+                    'assetLegalImpactIntegrityValue': data.assetLegalImpactIntegrityValue,
+                    'assetRegulatoryImpactIntegrityValue': data.assetRegulatoryImpactIntegrityValue,
+                    'assetFinancialImpactIntegrityValue': data.assetFinancialImpactIntegrityValue,
+                    'assetPrivacyImpactAvailabilityValue': data.assetPrivacyImpactAvailabilityValue,
+                    'assetLegalImpactAvailabilityValue': data.assetLegalImpactAvailabilityValue,
+                    'assetRegulatoryImpactConfidentiality': data.assetRegulatoryImpactConfidentiality,
+                    'assetReputationalImpactIntegrityValue': data.assetReputationalImpactIntegrityValue,
+                    'assetPrivacyImpactConfidentialityMinValue': data.assetPrivacyImpactConfidentialityMinValue,
+                    'assetLegalImpactConfidentialityMinValue': data.assetLegalImpactConfidentialityMinValue,
+                    'assetRegulatoryImpactConfidentialityValue': data.assetRegulatoryImpactConfidentialityValue,
+                    'assetRegulatoryImpactConfidentialityMinValue': data.assetRegulatoryImpactConfidentialityMinValue,
+                    'assetReputationalImpactConfidentialityMinValue': data.assetReputationalImpactConfidentialityMinValue,
+                    'assetFinancialImpactConfidentialityMinValue': data.assetFinancialImpactConfidentialityMinValue,
+                    'assetPrivacyImpactIntegrityMinValue': data.assetPrivacyImpactIntegrityMinValue,
+                    'assetLegalImpactIntegrityMinValue': data.assetLegalImpactIntegrityMinValue,
+                    'assetRegulatoryImpactIntegrityMinValue': data.assetRegulatoryImpactIntegrityMinValue,
+                    'assetReputationalImpactIntegrityMinValue': data.assetReputationalImpactIntegrityMinValue,
+                    'assetFinancialImpactIntegrityMinValue': data.assetFinancialImpactIntegrityMinValue,
+                    'assetPrivacyImpactAvailabilityMinValue': data.assetPrivacyImpactAvailabilityMinValue,
+                    'assetLegalImpactAvailabilityMinValue': data.assetLegalImpactAvailabilityMinValue,
+                    'assetRegulatoryImpactAvailabilityMinValue': data.assetRegulatoryImpactAvailabilityMinValue,
+                    'assetReputationalImpactAvailabilityMinValue': data.assetReputationalImpactAvailabilityMinValue,
+                    'assetFinancialImpactAvailabilityMinValue': data.assetFinancialImpactAvailabilityMinValue,
+                    'assetPrivacyImpactAccountabilityMinValue': data.assetPrivacyImpactAccountabilityMinValue,
+                    'assetLegalImpactAccountabilityMinValue': data.assetLegalImpactAccountabilityMinValue,
+                    'assetRegulatoryImpactAccountabilityMinValue': data.assetRegulatoryImpactAccountabilityMinValue,
+                    'assetReputationalImpactAccountabilityMinValue': data.assetReputationalImpactAccountabilityMinValue,
+                    'assetFinancialImpactAccountabilityValue': data.assetFinancialImpactAccountabilityValue,
+                    'assetFinancialImpactAccountabilityMinValue': data.assetFinancialImpactAccountabilityMinValue,
+                    'assetConfidentialityMitigatedScore': data.assetConfidentialityMitigatedScore,
+                    'assetIntegrityMitigatedScore': data.assetIntegrityMitigatedScore,
+                    'assetAvailabilityMitigatedScore': data.assetAvailabilityMitigatedScore,
+                    'assetAccountabilityMitigatedScore': data.assetAccountabilityMitigatedScore,
+
+
+                    'controlBaseDistribution': data.controlBaseDistribution,
+                    'controlAssessedDistribution': data.controlAssessedDistribution,
+                    'actoraccessDistribution': data.actorAccessDistribution,
+                    'actorCapabilityDistribution': data.actorCapabilityDistribution,
+                    'actorResourcesDistribution': data.actorResourcesDistribution,
+                    'actorMotivationDistribution': data.actorMotivationDistribution,
+                    'actorImpactToConfidentialityDistribution': data.actorImpactToConfidentialityDistribution,
+                    'actorImpactToIntegrityDistribution': data.actorImpactToIntegrityDistribution,
+                    'actorImpactToAvailabilityDistribution': data.actorImpactToAvailabilityDistribution,
+                    'actorImpactToAccountabilityDistribution': data.actorImpactToAccountabilityDistribution,
+                    'vulnerabilityEaseOfExploitationDistribution': data.vulnerabilityEaseOfExploitationDistribution,
+                    'vulnerabilityExposesScopeDistribution': data.vulnerabilityExposesScopeDistribution,
+                    'vulnerabilityInteractionRequiredDistribution': data.vulnerabilityInteractionRequiredDistribution,
+                    'vulnerabilityPrivilegesRequiredDistribution': data.vulnerabilityPrivilegesRequiredDistribution,
+                    'vulnerabilityExposureDistribution': data.vulnerabilityExposureDistribution,
+                    'vulnerabilityImpactToConfidentialityDistribution': data.vulnerabilityImpactToConfidentialityDistribution,
+                    'vulnerabilityImpactToIntegrityDistribution': data.vulnerabilityImpactToIntegrityDistribution,
+                    'vulnerabilityImpactToAvailabilityDistribution': data.vulnerabilityImpactToAvailabilityDistribution,
+                    'vulnerabilityImpactToAccountabilityDistribution': data.vulnerabilityImpactToAccountabilityDistribution,
+                    'attackComplexityDistribution': data.attackComplexityDistribution,
+                    'attackProliferationDistribution': data.attackProliferationDistribution,
+                    'attackImpactToConfidentialityDistribution': data.attackImpactToConfidentialityDistribution,
+                    'attackImpactToIntegrityDistribution': data.attackImpactToIntegrityDistribution,
+                    'attackImpactToAvailabilityDistribution': data.attackImpactToAvailabilityDistribution,
+                    'attackImpactToAccountabilityDistribution': data.attackImpactToAccountabilityDistribution,
+                    'assetConfidentialityDistribution': data.assetConfidentialityDistribution,
+                    'assetIntegrityDistribution': data.assetIntegrityDistribution,
+                    'assetAvailabilityDistribution': data.assetAvailabilityDistribution,
+                    'assetAccountabilityDistribution': data.assetAccountabilityDistribution,
+                    'assetPrivacyImpactConfidentialityDistribution': data.assetPrivacyImpactConfidentialityDistribution,
+                    'assetLegalImpactConfidentialityDistribution': data.assetLegalImpactConfidentialityDistribution,
+                    'assetRegulatoryImpactConfidentialityDistribution': data.assetRegulatoryImpactConfidentialityDistribution,
+                    'assetReputationalImpactConfidentialityDistribution': data.assetReputationalImpactConfidentialityDistribution,
+                    'assetFinancialImpactConfidentialityDistribution': data.assetFinancialImpactConfidentialityDistribution,
+                    'assetPrivacyImpactIntegrityDistribution': data.assetPrivacyImpactIntegrityDistribution,
+                    'assetLegalImpactIntegrityDistribution': data.assetLegalImpactIntegrityDistribution,
+                    'assetReputationalImpactIntegrityDistribution': data.assetReputationalImpactIntegrityDistribution,
+                    'assetRegulatoryImpactIntegrityDistribution': data.assetRegulatoryImpactIntegrityDistribution,
+                    'assetFinancialImpactIntegrityDistribution': data.assetFinancialImpactIntegrityDistribution,
+                    'assetPrvacyImpactAvailabilityDistribution': data.assetPrivacyImpactAvailabilityDistribution,
+                    'assetLegalImpactAvailabilityDistribution': data.assetLegalImpactAvailabilityDistribution,
+                    'assetRegulatoryImpactAvailabilityDistribution': data.assetRegulatoryImpactAvailabilityDistribution,
+                    'assetReputationalImpactAvailabilityDistribution': data.assetReputationalImpactAvailabilityDistribution,
+                    'assetFinancialImpactAvailabilityDistribution': data.assetFinancialImpactAvailabilityDistribution,
+                    'assetPrivacyImpactAccountabilityDistribution': data.assetPrivacyImpactAccountabilityDistribution,
+                    'assetLegalImpactAccountabilityDistribution': data.assetLegalImpactAccountabilityDistribution,
+                    'assetRegulatoryImpactAccountabilityDistribution': data.assetRegulatoryImpactAccountabilityDistribution,
+                    'assetReputationalImpactAccountabilityDistribution': data.assetReputationalImpactAccountabilityDistribution,
+                    'assetFinancialImpactAccountabilityDistribution': data.assetFinancialImpactAccountabilityDistribution,
+                    'assetConfidentialityMitigatedScore': data.assetConfidentialityMitigatedScore,
+                    'assetIntegrityMitigatedScore': data.assetIntegrityMitigatedScore,
+                    'assetAvailabilityMitigatedScore': data.assetAvailabilityMitigatedScore,
+                    'assetAccountabilityMitigatedScore': data.assetAccountabilityMitigatedScore,
+
+                    'nodeBehaviour': data.nodeBehaviour,
+                    'evidenceConfidenceValue': data.evidenceConfidenceValue,
+
+                },
+                'position': { x: data.x + data.size / 2, y: data.y + data.size / 2 }
+            });
+
+            var selected_node = getSelectedNode();
+            var selected_node_id = selected_node == undefined ? "" : selected_node.data.id;
+
+            lastNode = cy.nodes().last();
+            lastNodeColor = data.color;
+            lastNodeSize = data.size;
+            lastNodeShape = data.shape;
+            if (alwaysSelectLastNode) {
+                selectLastNode();
+            }
+            ur.do("add", lastNode);
+
+            if (data.is_suggested && data.is_suggested != undefined && data.is_suggested == true) {
+                disableNode(lastNode.id());
+                addEdge(data.selected_node_id, lastNode.id());
+            }
+
+            var last_node_id = lastNode.id();
+            if (selected_node_id != "") {
+                if (data["isShift"] == "true" && data["isF1"] == "true") {
+                    addEdge(selected_node_id, last_node_id);
+                } else if (data["isShift"] == "true") {
+                    addEdge(last_node_id, selected_node_id);
+                }
+            }
+
+            return lastNode.id();
+        }
+
+        function addLoopEdge(data) {
+            addEdge(data.selected_node_id, data.selected_node_id);
+            return lastNode.id();
+        }
+
+        function centerGraph(x, y) {
+            var width = cy.width();
+            var height = cy.height();
+            var pos_x = (width - x) / 2 - (x + 30) / 2;
+            var pos_y = (height - y) / 2 - (y + 30) / 2;
+            cy.pan({ x: pos_x, y: pos_y });
+        }
+
+        function adjustNodePosition(offset_length = 150) {
+            var zoom = cy.zoom();
+            offset_length = parseInt(offset_length / zoom)
+            var pan_pos = cy.pan();
+            var width = cy.width();
+            var height = cy.height();
+            var center_pos_x = ((-1) * pan_pos.x + width / 2) / zoom;
+            var center_pos_y = ((-1) * pan_pos.y + height / 2) / zoom;
+            var sign = (Math.random() * 2) > 1 ? 1 : -1;
+            var offset_x = sign * Math.random() * (offset_length == "-1" ? (width / 2) : offset_length);
+            sign = (Math.random() * 2) > 1 ? 1 : -1;
+            var offset_y = sign * Math.random() * (offset_length == "-1" ? (height / 2) : offset_length);
+
+            lastNode = cy.nodes().last();
+            lastNode.data("x", center_pos_x + offset_x);
+            lastNode.data("y", center_pos_y + offset_y);
+            lastNode.position({ x: center_pos_x + offset_x, y: center_pos_y + offset_y });
+        }
+
+        //Set base value for node with ID
+        function setcontrolBaseScoreForNode(id, controlBaseScore) {
+            var node = cy.getElementById(id);
+            node.data('controlBaseScore', controlBaseScore);
+            bound.eventHandler('node', 'controlBaseScoreChanged', eventToJson(id));
+        }
+
+        function updateNodeTitle(id, flag = "true") {
+            var node = cy.getElementById(id);
+            node.data('title_type', flag);
+        }
+
+        function selectLastNode() {
+            lastNode = cy.nodes().last();
+            cy.nodes().deselect();
+            lastNode.select();
+        }
+
+        function getLastNodeID() {
+            lastNode = cy.nodes().last();
+            return lastNode.id();
+        }
+
+        function getLastEdge() {
+            return cy.edges().last();
+        }
+
+        function getLastEdgeID() {
+            lastEdge = cy.edges().last();
+            return lastEdge.id();
+        }
+
+        //Used for test
+        function setBaseAndedgeStrengthValues(id, base, assessed) {
+            var node = cy.getElementById(id);
+            node.data('controlBaseScore', base);
+            node.data('edgeStrengthValue', assessed);
+        }
+
+        function getMinAndMaxNCV_BV() {
+            var max = cy.nodes().max(function () {
+                return this.data('calculatedValue') / this.data('controlBaseScore');
+            });
+            var min = cy.nodes().min(function () {
+                return this.data('calculatedValue') / this.data('controlBaseScore');
+            });
+        }
+
+        function setStyleCopyMode(sourceID) {
+            if (isManualTargeting) {
+                removeManualTargetingMode();
+            }
+            styleCopySourceID = sourceID;
+            isStyleCopyTargeting = true;
+            cy.container().style.cursor = 'url("netg://cur/dropper.cur"), auto';
+            cy.autounselectify(true);
+            bound.eventHandler('main', 'styleCopySet', eventToJson(sourceID));
+        }
+
+        function removeStyleCopyMode(sourceID) {
+            styleCopySourceID = null;
+            isStyleCopyTargeting = false;
+            cy.container().style.cursor = 'default';
+            cy.autounselectify(false);
+            bound.eventHandler('main', 'styleCopyRemoved', eventToJson(sourceID));
+        }
+
+        function setManualTargetingMode(sourceID, reverse) {
+            if (isStyleCopyTargeting) {
+                removeStyleCopyMode();
+            }
+            reverseManualTargeting = reverse;
+            manualTargetingSourceID = sourceID;
+            isManualTargeting = true;
+            cy.container().style.cursor = 'crosshair';
+            cy.autounselectify(true);
+            bound.eventHandler('main', 'manualTargetingSet', eventToJson(sourceID));
+        }
+
+        function removeManualTargetingMode() {
+            manualTargetingSourceID = null;
+            isManualTargeting = false;
+            reverseManualTargeting = false;
+            cy.container().style.cursor = 'default';
+            cy.autounselectify(false);
+            bound.eventHandler('main', 'manualTargetingRemoved', eventToJson(manualTargetingSourceID));
+        }
+
+        function deleteNodeWithID(nodeID) {
+            cy.remove(cy.getElementById(nodeID))
+        }
+
+        //Add edges to all nodes except itself
+        function edgesToAll(nodeID) {
+            cy.nodes().forEach(ele => {
+                if (ele.id() != nodeID) {
+                    addEdge(nodeID, ele.id());
+                }
+            });
+        }
+
+        function isNodeEnabled(nodeID) {
+            return cy.getElementById(nodeID).data('enabled');
+        }
+
+        function disableNode(nodeID) {
+            cy.getElementById(nodeID).data('enabled', false);
+            cy.getElementById(nodeID).data('opacity', '0.5');
+        }
+
+        function enableNode(nodeID) {
+            cy.getElementById(nodeID).data('enabled', true);
+            cy.getElementById(nodeID).data('opacity', '1.0');
+        }
+
+        function disableEdgesFromNode(nodeID) {
+            var node = cy.getElementById(nodeID);
+            var edges = node.connectedEdges();
+            edges.forEach(edge => {
+                disableEdge(edge.id());
+            });
+
+        }
+
+        function enableEdgesFromNode(nodeID) {
+            var node = cy.getElementById(nodeID);
+            var edges = node.connectedEdges();
+            edges.forEach(edge => {
+                enableEdge(edge.id());
+            });
+
+        }
+
+        function getNumberOfElementsInSubtree(nodeID) {
+            var node = cy.getElementById(nodeID);
+            return node.successors().length;
+        }
+
+        function deleteNodeWithSubtree(nodeID) {
+            var node = cy.getElementById(nodeID);
+            var successors = node.successors();
+            cy.remove(successors);
+            cy.remove(node);
+        }
+
+        function deleteAllEdgesForNode(nodeID) {
+            var node = cy.getElementById(nodeID);
+            var alledges = cy.edges().filter(function (ele) {
+                return ele.data('source') == nodeID || ele.data('target') == nodeID;
+            });
+            cy.remove(alledges);
+        }
+
+        //Remove all edges for node with given ID
+        function deleteAllInEdgesForNode(nodeID) {
+            var node = cy.getElementById(nodeID);
+            var alledges = cy.edges().filter(function (ele) {
+                return ele.data('target') == nodeID;
+            });
+            cy.remove(alledges);
+        }
+
+        //Delete outer edges for node with given ID
+        function deleteAllOutEdgesForNode(nodeID) {
+            var node = cy.getElementById(nodeID);
+            var alledges = cy.edges().filter(function (ele) {
+                return ele.data('source') == nodeID;
+            });
+            cy.remove(alledges);
+        }
+
+        //Get title for node with given ID
+        function getNodeTitle(nodeID) {
+            return cy.getElementById(nodeID).data('title', false);
+        }
+
+        //Get node JSON for backend
+        function getNodeJson(nodeID) {
+            var node = cy.getElementById(nodeID);
+            return node.json();
+        }
+
+        //Get node edgeStrengthValue and calculatedValue
+        function getNodeCalculatedAndedgeStrengthValues(nodeID) {
+            var node = cy.getElementById(nodeID);
+            return node.data('edgeStrengthValue') + ";" + node.data('calculatedValue');
+        }
+
+
+        function getNodeedgeStrengthValue(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('edgeStrengthValue') != null) {
+                return node.data('edgeStrengthValue');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getpreviousNodeedgeStrengthValue(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('previousedgeStrengthValue') != null) {
+                return node.data('previousedgeStrengthValue');
+            }
+            else {
+                return 0;
+            }
+        }
+
+
+        function getNodecontrolBaseScore(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('controlBaseScore') != null) {
+                return node.data('controlBaseScore');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getNodeChangedcontrolBaseScore(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('changeIncontrolBaseScore') != null) {
+                return node.data('changeIncontrolBaseScore');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getNodeChangededgeStrengthValue(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('changeInedgeStrengthValue') != null) {
+                return node.data('changeInedgeStrengthValue');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getNodeChangedCalculatedValue(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('changeIncalculatedValue') != null) {
+                return node.data('changeIncalculatedValue');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getpreviousNodecontrolBaseScore(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('previouscontrolBaseScore') != null) {
+                return node.data('previouscontrolBaseScore');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getNodeCalculatedValue(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('calculatedValue') != null) {
+                return node.data('calculatedValue');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getpreviousNodeCalculatedValue(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('previouscalculatedValue') != null) {
+                return node.data('previouscalculatedValue');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getedgeStrengthValue(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('edgeStrengthValue') != null) {
+                return node.data('edgeStrengthValue');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function getEdgeImpactedValue(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('impactedValue') != null) {
+                return node.data('impactedValue');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        function zeroNodePreviousValues(nodeID) {
+            var node = cy.getElementById(nodeID);
+            node.data('previouscontrolBaseScore', 0);
+            node.data('previouscalculatedValue', 0);
+            node.data('previousedgeStrengthValue', 0);
+            return 0;
+        }
+
+
+        function zeroAllControlNodes() {
+            nodes = cy.nodes().filter('[nodeType = "control"]');
+            nodes.forEach(node => {
+                node.data('controlBaseScore', 0);
+                node.data('calculatedValue', 0);
+                node.data('edgeStrengthValue', 0);
+            })
+            return 0;
+        }
+
+        function checkforRootAssets() {
+            const IDArray = [];
+            nodes = cy.nodes().roots().filter('[nodeType = "asset"]')
+            nodes.forEach(item => {
+                IDArray.push(item.id());
+            });
+            return JSON.stringify(IDArray);
+        }
+
+        function checkforRootObjectives() {
+            const IDArray = [];
+            nodes = cy.nodes().roots().filter('[nodeType = "objective"]')
+            nodes.forEach(item => {
+                IDArray.push(item.id());
+            });
+            return JSON.stringify(IDArray);
+        }
+
+        function checkforRootAttacks() {
+            const IDArray = [];
+            nodes = cy.nodes().roots().filter('[nodeType = "attack"]')
+            nodes.forEach(item => {
+                IDArray.push(item.id());
+            });
+            return JSON.stringify(IDArray);
+        }
+
+        function SetRootObjectivesToNotAssessed() {
+            nodes = cy.nodes().roots().filter('[nodeType = "objective"]')
+            nodes.forEach(node => {
+                node.data('controlBaseScore', 100);
+                node.data('objectiveTargetType', 'Manually set');
+            });
+            return "Done";
+        }
+
+
+        function zeroAllGroupNodes() {
+            nodes = cy.nodes().filter('[nodeType = "group"]');
+            nodes.forEach(node => {
+                node.data('controlBaseScore', 0);
+                node.data('calculatedValue', 0);
+                node.data('edgeStrengthValue', 0);
+                node.data('previouscontrolBaseScore', 0);
+                node.data('previouscalculatedValue', 0);
+                node.data('previousedgeStrengthValue', 0);
+            })
+            return 0;
+        }
+
+        function zeroAllAssetNodes() {
+            nodes = cy.nodes().filter('[nodeType = "asset"]');
+            nodes.forEach(node => {
+                node.data('controlBaseScore', 0);
+                node.data('calculatedValue', 0);
+                node.data('edgeStrengthValue', 0);
+                node.data('previouscontrolBaseScore', 0);
+                node.data('previouscalculatedValue', 0);
+                node.data('previousedgeStrengthValue', 0);
+            })
+            return 0;
+        }
+
+        function zeroAllObjectiveNodes() {
+            nodes = cy.nodes().filter('[nodeType = "objective"]');
+            nodes.forEach(node => {
+                if (node.data('objectiveTargetType') != "Manually set") {
+                    node.data('controlBaseScore', 0);
+                }
+                node.data('calculatedValue', 0);
+                node.data('edgeStrengthValue', 0);
+                node.data('previouscontrolBaseScore', 0);
+                node.data('previouscalculatedValue', 0);
+                node.data('previousedgeStrengthValue', 0);
+            })
+        }
+
+        function zeroAllAttackNodes() {
+            nodes = cy.nodes().filter('[nodeType = "attack"]');
+            nodes.forEach(node => {
+                if (node.data('objectiveTargetType') != "Manually set") {
+                    node.data('controlBaseScore', 0);
+                }
+                node.data('calculatedValue', 0);
+                node.data('edgeStrengthValue', 0);
+                node.data('previouscontrolBaseScore', 0);
+                node.data('previouscalculatedValue', 0);
+                node.data('previousedgeStrengthValue', 0);
+            })
+        }
+
+        function getEdgeJson(edgeID) {
+            var edge = cy.getElementById(edgeID);
+            //just for testing. Do not forget to remove
+            var json = edge.json();
+            return edge.json();
+        }
+
+        function getNodeOriginColor(nodeID) {
+            var node = cy.getElementById(nodeID);
+            if (node.data('origin_color') != null) {
+                return node.data('origin_color');
+            }
+            else {
+                return 0;
+            }
+        }
+
+        //Set node shape
+        function setNodeShape(nodeID = "", shape) {
+            nodeID = nodeID == "" ? getLastNodeID() : nodeID;
+            var node = cy.getElementById(nodeID);
+            node.data('shape', shape);
+            bound.eventHandler('node', 'shapeUpdated', eventToJson(node.id(), node.data('title')));
+        }
+
+        //Set node type
+        function setNodeType(nodeID = "", type) {
+            nodeID = nodeID == "" ? getLastNodeID() : nodeID;
+            setElementData(nodeID, "nodeType", type);
+        }
+
+        function cloneNode(nodeID) {
+            var node = cy.getElementById(nodeID);
+            var copyTitle = node.data('title');
+            var target = cy.nodes().last();
+            var cy_data = node.json();
+            cy_data = cy_data["data"];
+            cy_data["controltype"] = cy_data["nodeType"]
+            cy_data["title"] = copyTitle;
+            cy_data["titleSize"] = 10;
+            cy_data["size"] = 10;
+            cy_data["color"] = "rgb(0,0,0)";
+            cy_data["x"] = node.position().x + 50;
+            cy_data["y"] = node.position().y + 50;
+            cy_data["id"] = undefined;
+            var newNodeID = addNodeWithObject(cy_data);
+
+            bound.eventHandler('node', 'nodeCloned', eventToJson(node.id(), node.data('title')));
+            if (alwaysSelectLastNode) {
+                selectLastNode();
+            }
+
+            cy.getElementById(nodeID).deselect();
+            cy.getElementById(newNodeID).select();
+            return newNodeID;
+        }
+
+        /*** Edge related routines ***/
+
+        function change_edge_style(tmp_edge_style, tmp_edge_width = "1.0") {
+            edge_style = tmp_edge_style;
+        }
+
+        //Add edge between two nodes
+        function addEdge(sourceID, targetID, edgeStrengthValue, relationship, relationshipStrength, type, title = '', description = '', classes = '') {
+            //Check edge exists and dont allow multitargeting
+            var sourceNode = getNodeJson(sourceID);
+            var targetNode = getNodeJson(targetID);
+            var sourceType = sourceNode.data.nodeType.toLowerCase();
+            var targetType = targetNode.data.nodeType.toLowerCase();
+
+            if (sourceNode.data.parent == targetNode.data.id) return; // Prevent an asset in an asset group creating an edge to its parent
+            //if (sourceNode.data.parent != null || (sourceNode.data.parent == targetNode.data.parent)) return; // Prevent an asset in an asset group creating an edge to anpther child in the asset group
+            // if (sourceNode.data.parent != null || targetNode.data.parent != null) return;
+            if (
+                !(sourceType == "control" && targetType == "objective") &&
+                !(sourceType == "control" && targetType == "group") &&
+                !(sourceType == "control" && targetType == "attack") &&
+                !(sourceType == "control" && targetType == "actor") &&
+                !(sourceType == "control" && targetType == "vulnerability") &&
+                !(sourceType == "control" && targetType == "asset") &&
+                !(sourceType == "objective" && targetType == "objective") &&
+                !(sourceType == "objective" && targetType == "asset") &&
+                !(sourceType == "objective" && targetType == "attack") &&
+                !(sourceType == "objective" && targetType == "actor") &&
+                !(sourceType == "objective" && targetType == "group") &&
+                !(sourceType == "objective" && targetType == "vulnerability") &&
+                !(sourceType == "group" && targetType == "group") &&
+                !(sourceType == "group" && targetType == "asset") &&
+                !(sourceType == "group" && targetType == "attack") &&
+                !(sourceType == "group" && targetType == "actor") &&
+                !(sourceType == "actor" && targetType == "attack") &&
+                !(sourceType == "asset" && targetType == "asset") &&
+                !(sourceType == "asset" && targetType == "attack") &&
+                !(sourceType == "asset-group" && targetType == "asset") &&
+                !(sourceType == "asset" && targetType == "asset-group") &&
+                !(sourceType == "vulnerability" && targetType == "asset") &&
+                !(sourceType == "vulnerability" && targetType == "vulnerability") &&
+                !(sourceType == "attack" && targetType == "vulnerability") &&
+                !(sourceType == "vulnerability" && targetType == "attack") &&
+                !(sourceType == "vulnerability" && targetType == "asset-group")
+            ) {
+                return;
+            }
+
+            var alledges = cy.edges().filter(function (ele) {
+                return ele.data('source') == sourceID && ele.data('target') == targetID;
+            });
+
+            if (alledges.length > 0) {
+                return;
+            }
+
+            if (relationship === undefined) {
+                relationship = 'Influences';
+            }
+
+            /*if (edgeStrengthScore === undefined) {
+                edgeStrengthScore = '0';
+            }*/
+
+            if (edgeStrengthValue === undefined) {
+                edgeStrengthValue = '1.00';
+            }
+
+            //if (edgeStrengthMinValue === undefined) {
+                edgeStrengthMinValue = '1.00';
+            //}
+
+            //if (edgeStrengthDistribution === undefined) {
+                edgeStrengthDistribution = '[\"SpecificValue\",\"1.00\",null,null,\"edge\"]';
+            //}
+
+            //if (relationshipStrength === undefined) {
+                relationshipStrength = 'Direct';
+            //}
+
+            //if (type === undefined) {
+                type = 'Normal';
+            //}
+
+            last_edge_added = cy.add({
+                group: 'edges',
+                data: {
+                    source: sourceID,
+                    target: targetID,
+                    'label': 'data(title)',
+                    'title': title,
+                    'label_type': g_title_type,
+                    'description': description,
+                    'note': '',
+                    'relationship': relationship,
+                    'labelSize': 10,
+                    'color': 'black',
+                    'enabled': true,
+                    'opacity': 1,
+                    'impactedValue': 0.0,
+                    'edgeStrengthValue': edgeStrengthValue,
+                    'edgeStrengthScore': 0,//edgeStrengthScore,
+                    'edgeStrengthMinValue': edgeStrengthMinValue,
+                    'edgeStrengthDistribution': edgeStrengthDistribution,
+                    'relationshipStrength': relationshipStrength,
+                    'processed': false,
+                    'weight': 1,
+                    'type': ""
+                }
+            });
+
+            ur.do("add", cy.elements().last());
+            return getLastEdgeID();
+        }
+
+        var eh = cy.edgehandles({
+            snap: false
+        });
+
+        function enableDrawMode() {
+            eh.enableDrawMode();
+        }
+
+        function disableDrawMode() {
+            eh.disableDrawMode();
+        }
+
+        function disableEdge(edgeID) {
+            cy.getElementById(edgeID).data('enabled', false);
+            cy.getElementById(edgeID).data('opacity', '0.2');
+        }
+
+        function enableEdge(edgeID) {
+            cy.getElementById(edgeID).data('enabled', true);
+            cy.getElementById(edgeID).data('opacity', '1.0');
+        }
+
+        function deleteEdgeWithID(edgeID) {
+            cy.remove(cy.getElementById(edgeID))
+        }
+
+        function isEdgeEnabled(edgeID) {
+            return cy.getElementById(edgeID).data('enabled');
+        }
+
+        function getRandomNodeID() {
+            return cy.nodes()[getRandomArbitrary(0, cy.nodes().length - 1)].id();
+        }
+
+        function getRandomArbitrary(min, max) {
+            return Math.trunc(Math.random() * (max - min) + min);
+        }
+        /*** Calculation related ***/
+
+        //Get list of root nodes
+        function getRootsIDs() {
+            return JSON.stringify(cy.nodes().roots().map(function (item) { return item.id(); }));
+        }
+
+        function getNodeIDs() {
+            return JSON.stringify(cy.nodes().map(function (item) { return item.id(); }));
+        }
+
+        function getNodes() {
+            return cy.nodes().length > 0 ? JSON.stringify(cy.nodes().map(function (item) { return item.data(); })) : "[]";
+        }
+
+        function getEdges() {
+            return JSON.stringify(cy.edges().map(function (item) { return item.data(); }));
+        }
+
+        function getTimestamp() {
+            var date = new Date();
+            return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}.${date.getMilliseconds().toString().padStart(3, "0")}`;
+        }
+
+        //Get shord description for node for logs
+        function shortNodeDesc(node) {
+            return `"${node.data('title')} (${node.id().slice(0, 6)}...)"`;
+        }
+
+        function shortEdgeDesc(edge) {
+            return `"${edge.id().slice(0, 6)}..."`;
+        }
+
+        function deleteElement() {
+            cy.elements("edge:selected").remove();
+            cy.elements("node:selected").remove();
+        }
+
+        function minusNodeSize() {
+            var nodes = cy.elements("node:selected");
+            for (var i = 0; i < nodes.length; i++) {
+                var item = nodes[i];
+                if (item.data("width") > 20) {
+                    item.data("width", parseInt(item.data("width")) - 10);
+                    update_shape_position_for_node();
+                }
+                if (item.data("height") > 20) {
+                    item.data("height", parseInt(item.data("height")) - 10);
+                    update_shape_position_for_node();
+                }
+            }
+        }
+
+        function plusNodeSize() {
+            var nodes = cy.elements("node:selected");
+            for (var i = 0; i < nodes.length; i++) {
+                var item = nodes[i];
+                item.data("width", parseInt(item.data("width")) + 10);
+                item.data("height", parseInt(item.data("height")) + 10);
+                update_shape_position_for_node();
+            }
+        }
+
+    </script>
+
+    <img src="" id="captureImg" />
+    <canvas id="captureCanvas"></canvas>
+</body>
+
+</html>

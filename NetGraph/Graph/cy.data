@@ -1,0 +1,201 @@
+{
+  "edge_relationship": "Meets,Drives,Influences,Impacts,Belongs To,Informs,Mitigates,Exploits,Allows,Undertakes",
+  "node_assets": [
+    "Fully Compliant,1.00,Fully Compliant",
+    "Mostly Compliant,0.8,Mostly Compliant",
+    "Partially Compliant,0.5,Partially Compliant",
+    "Limited Compliance,0.2,Limited Compliance",
+    "No Compliance,0.0,No Compliance",
+    "Not Assessed,0.0,Not Assessed"
+  ],
+  "edge_relationship_strength": [
+    {
+      "status": "Direct",
+      "value": "1.00",
+      "description": "Direct",
+      "width": "1",
+      "color": "rgb(0,0,0)"
+    },
+    {
+      "status": "Strong",
+      "value": "0.8",
+      "description": "Strong",
+      "width": "1",
+      "color": "rgb(0,0,0)"
+    },
+    {
+      "status": "Moderate",
+      "value": "0.5",
+      "description": "Moderate",
+      "width": "1",
+      "color": "rgb(0,0,0)"
+    },
+    {
+      "status": "Weak",
+      "value": "0.25",
+      "description": "Weak",
+      "width": "1",
+      "color": "rgb(0,0,0)"
+    },
+    {
+      "status": "Not Assessed",
+      "value": "0.0",
+      "description": "Not Assessed",
+      "width": "1",
+      "color": "rgb(0,0,0)"
+    }
+  ],
+  "default_edge_relation": [
+    {
+      "source": "Control",
+      "target": "Objective",
+      "relation": "Meets"
+    },
+    {
+      "source": "Control",
+      "target": "Group",
+      "relation": "Belongs To"
+    },
+    {
+      "source": "Objective",
+      "target": "Group",
+      "relation": "Belongs To"
+    },
+    {
+      "source": "Objective",
+      "target": "Asset",
+      "relation": "Mitigates"
+    },
+    {
+      "source": "Objective",
+      "target": "Attack",
+      "relation": "Mitigates"
+    },
+    {
+      "source": "Objective",
+      "target": "Actor",
+      "relation": "Mitigates"
+    },
+    {
+      "source": "Objective",
+      "target": "Objective",
+      "relation": "Impacts"
+    },
+    {
+      "source": "Objective",
+      "target": "Vulnerability",
+      "relation": "Mitigates"
+    },
+    {
+      "source": "Group",
+      "target": "Asset",
+      "relation": "Impacts"
+    },
+    {
+      "source": "Group",
+      "target": "Attack",
+      "relation": "Mitigates"
+    },
+    {
+      "source": "Group",
+      "target": "Actor",
+      "relation": "Mitigates"
+    },
+    {
+      "source": "Group",
+      "target": "Objective",
+      "relation": "Belongs To"
+    },
+    {
+      "source": "Asset",
+      "target": "Asset",
+      "relation": "Belongs"
+    },
+    {
+      "source": "Attack",
+      "target": "Asset",
+      "relation": "Impacts"
+    },
+    {
+      "source": "Attack",
+      "target": "Group",
+      "relation": "Belongs To"
+    },
+    {
+      "source": "Actor",
+      "target": "Attack",
+      "relation": "Undertakes"
+    },
+    {
+      "source": "Attack",
+      "target": "Vulnerability",
+      "relation": "Exploites"
+    },
+    {
+      "source": "Vulnerability",
+      "target": "Asset",
+      "relation": "Impacts"
+    },
+    {
+      "source": "Asset",
+      "target": "Attack",
+      "relation": "Impacts"
+    },
+    {
+      "source": "Evidence",
+      "target": "Control",
+      "relation": "Assures"
+    },
+    {
+      "source": "Vulnerability",
+      "target": "Attack",
+      "relation": "Allows"
+    }
+
+  ],
+  "actor_value": {
+    "capability": [],
+    "resources": [],
+    "motivation": [],
+    "access": []
+  },
+  "asset_value": {
+    "confidentiality": [],
+    "integrity": [],
+    "availibility": [],
+    "accountable": []
+  },
+  "attack_value": {
+    "complexity": [],
+    "proliferation": []
+  },
+  "node_categories": [],
+  "impact": [
+    {
+      "impact": "Very Strong",
+      "value": 100,
+      "description": "Fully meets objective requirements on its own"
+    },
+    {
+      "impact": "Strong",
+      "value": 75,
+      "description": "Mostly meets objective requirements on its own"
+    },
+    {
+      "impact": "Moderate",
+      "value": 50,
+      "description": "Moderately meets objective requirement"
+    },
+    {
+      "impact": "Weak",
+      "value": 25,
+      "description": "Meets only limited objective requirements"
+    },
+    {
+      "impact": "Very Weak",
+      "value": 10,
+      "description": "Meets very limited objective requirements"
+    }
+  ],
+  "key_words": []
+}
